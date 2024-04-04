@@ -35,9 +35,9 @@ astconvolve_LDADD = $(top_builddir)/bootstrapped/lib/libgnu.la \
                     $(top_builddir)/lib/libgnuastro.la \
                     $(CONFIG_LDADD)
 
-astconvolve_SOURCES = main.c ui.c convolve.c
+astconvolve_SOURCES = main.c ui.c convolve.c 
 
-EXTRA_DIST = main.h authors-cite.h args.h ui.h convolve.h
+EXTRA_DIST = main.h authors-cite.h args.h ui.h convolve.h 
 
 
 

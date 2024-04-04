@@ -114,6 +114,7 @@ libgnuastro_la_SOURCES = \
   convolve.c \
   cosmology.c \
   data.c \
+  deconvolution.c \
   ds9.c \
   eps.c \
   fit.c \
@@ -168,6 +169,7 @@ pkginclude_HEADERS = gnuastro/config.h \
   $(headersdir)/cosmology.h \
   $(headersdir)/data.h \
   $(headersdir)/dimension.h \
+  $(headersdir)/deconvolution.h \
   $(headersdir)/ds9.h \
   $(headersdir)/eps.h \
   $(headersdir)/fit.h \

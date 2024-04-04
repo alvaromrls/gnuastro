@@ -71,7 +71,7 @@
 # space characters in them, quote the full value
 numjobs=8
 builddir=build
-outdir=
+outdir=/home/alvaro/Development/test-exec/saturn
 
 
 
@@ -87,9 +87,9 @@ outdir=
 # the script, you have to add a line under the line below
 #    'if [ -f "$utility" ]; then rm "$utility"; fi'
 # that will delete that particular program.
-utilname=
-arguments=
-options=
+utilname=deconvolve
+arguments=convolution.fits
+options="--kernel=tess-psf1.fits -C --khdu=0"
 
 
 

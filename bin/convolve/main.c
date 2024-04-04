@@ -25,31 +25,47 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <gnuastro/deconvolution.h>
+
 #include <gnuastro-internal/timing.h>
 
 #include "main.h"
 
 #include "convolve.h"
-#include "ui.h"                 /* Needs convolveparams in main.h */
+#include "ui.h" /* Needs convolveparams in main.h */
 
 int
-main(int argc, char *argv[])
+main (int argc, char *argv[])
 {
   struct timeval t1;
-  struct convolveparams p={{{0},0},0};
-
+  struct convolveparams p = { { { 0 }, 0 }, 0 };
+  gal_data_t *data = NULL;
   /* Set the starting time. */
-  time(&p.rawtime);
-  gettimeofday(&t1, NULL);
-
+  time (&p.rawtime);
+  gettimeofday (&t1, NULL);
   /* Read the input parameters. */
-  ui_read_check_inputs_setup(argc, argv, &p);
-
+  ui_read_check_inputs_setup (argc, argv, &p);
   /* Run Convolve. */
-  convolve(&p);
+  // convolve(&p);
+  /* Save the padded kernel image. */
+  /* Prepare the data structure for viewing the steps, note that we
+    don't need the array that is initially made. */
+  // data = gal_data_alloc (NULL, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+  //                        p.cp.minmapsize, p.cp.quietmmap, NULL, NULL, NULL);
+  // gal_complex_to_real (d.kernelpadding, d.sizex * d.sizey,
+  //                      COMPLEX_TO_REAL_REAL, &tmp);
+  // data->array = tmp;
+  // gal_fits_img_write (data, "kernelpadeado.fits", NULL, 0);
+  // gal_complex_to_real (d.kernelpadding, d.sizex * d.sizey,
+  //                      COMPLEX_TO_REAL_REAL, &tmp);
+  // data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+  gal_deconvolution_tikhonov (p.input, p.kernel, 0.0001, &data);
+
+  gal_fits_img_write (data, "deconvolution.fits", NULL, 0);
+  free (data);
 
   /* Free all non-freed allocations. */
-  ui_free_report(&p, &t1);
+  ui_free_report (&p, &t1);
 
   /* Return successfully. */
   return EXIT_SUCCESS;
