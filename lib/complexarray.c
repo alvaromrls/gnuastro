@@ -1,0 +1,333 @@
+/*********************************************************************
+Functions to perform operations with complex arrays.
+This is part of GNU Astronomy Utilities (Gnuastro) package.
+
+Original author:
+     Alvaro Morales <alvaro96m@hotmail.com>
+Contributing author(s):
+Copyright (C) 2024-2024 Free Software Foundation, Inc.
+
+Gnuastro is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+Gnuastro is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
+**********************************************************************/
+#include <config.h>
+
+#include <error.h>
+
+#include <gnuastro/complexarray.h>
+#include <gnuastro/data.h>
+#include <gnuastro/pointer.h>
+
+/**
+ * @brief Function to convert a complex number array into a real number array.
+ *
+ * @param complexarray the array to be converted
+ * @param size total number of element in the array
+ * @param action how to convert the complex numbers
+ * @param output a pointer to pointer for the new data
+ */
+void
+gal_complex_array_to_real (gsl_complex_packed_array complexarray, size_t size,
+                           complex_to_real action, double **output)
+{
+  double *out; // Easier var to work with than output
+
+  /* Allocate the space for the real array. */
+  out = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "out");
+
+  /* Fill the real array with the derived value from the complex array. */
+  switch (action)
+    {
+    case COMPLEX_TO_REAL_SPEC:
+      for (size_t index = 0; index < size; index++)
+        {
+          size_t complexIndex = 2 * index;
+          double real = complexarray[complexIndex];
+          double im = complexarray[complexIndex + 1];
+          out[index] = sqrt ((real * real) + (im * im));
+        }
+      break;
+    case COMPLEX_TO_REAL_PHASE:
+      for (size_t index = 0; index < size; index++)
+        {
+          size_t complexIndex = 2 * index;
+          double real = complexarray[complexIndex];
+          double im = complexarray[complexIndex + 1];
+          out[index] = atan2 (real, im);
+        }
+      break;
+    case COMPLEX_TO_REAL_REAL:
+      for (size_t index = 0; index < size; index++)
+        {
+          size_t complexIndex = 2 * index;
+          out[index] = complexarray[complexIndex];
+        }
+      break;
+    default:
+      error (EXIT_FAILURE, 0,
+             "%s: a bug! Please contact us at %s so we can "
+             "correct it. The 'action' code %d is not recognized",
+             __func__, PACKAGE_BUGREPORT, action);
+    }
+  *output = out;
+}
+
+/**
+ * @brief Perform an element-wise multiplication of two complex arrays.
+ *
+ * @param first
+ * @param second
+ * @param output a pointer to pointer for the new data.
+ * @param size total number of element in the array.
+ */
+void
+gal_complex_array_multiply (gsl_complex_packed_array first,
+                            gsl_complex_packed_array second,
+                            gsl_complex_packed_array *output, size_t size)
+{
+  gsl_complex_packed_array out;
+
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "product");
+
+  /* Iterate over the arrays: multiply the elements */
+  for (size_t index = 0; index < size; index++)
+    {
+      gsl_complex x = first[index * 2] + I * first[index * 2 + 1];
+      gsl_complex y = second[index * 2] + I * second[index * 2 + 1];
+      gsl_complex result = gsl_complex_mul (x, y);
+      out[index * 2] = GSL_REAL (result);
+      out[index * 2 + 1] = GSL_IMAG (result);
+    }
+  *output = out;
+}
+
+/**
+ * @brief Perform an element-wise division of two complex arrays.
+ *
+ * @param first dividend.
+ * @param second divisor.
+ * @param output a pointer to pointer for the new data.
+ * @param size total number of element in the array.
+ * @param minValue if divisor is less than this value, the result will be 0.
+ */
+void
+gal_complex_array_divide (gsl_complex_packed_array first,
+                          gsl_complex_packed_array second,
+                          gsl_complex_packed_array *output, size_t size,
+                          double minvalue)
+{
+  gsl_complex_packed_array out;
+
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "product");
+
+  /* Iterate over the arrays: calculate division if element > minValue or set
+   * to 0 otherwise*/
+  for (size_t index = 0; index < size; index++)
+    {
+      gsl_complex x = first[index * 2] + I * first[index * 2 + 1];
+      gsl_complex y = second[index * 2] + I * second[index * 2 + 1];
+      if (gsl_complex_abs (y) > minvalue)
+        {
+          gsl_complex result = gsl_complex_div (x, y);
+          out[index * 2] = GSL_REAL (result);
+          out[index * 2 + 1] = GSL_IMAG (result);
+        }
+      else
+        {
+          out[index * 2] = 0;
+          out[index * 2 + 1] = 0;
+        }
+    }
+  *output = out;
+}
+
+/**
+ * @brief Calculate the conjugate of a given complex array.
+ * Conjugate(a+bi) = a-bi.
+ *
+ * @param input the array to conjugate.
+ * @param size total number of element in the array.
+ * @param minValue if divisor is less than this value, the result will be 0.
+ */
+void
+gal_complex_array_conjugate (gsl_const_complex_packed_array input, size_t size,
+                             gsl_complex_packed_array *output)
+{
+  gsl_complex_packed_array out;
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "product");
+
+  /* Iterate over the array: copy real part and negate the imaginary */
+  for (size_t index = 0; index < size; index++)
+    {
+      out[index * 2] = input[index * 2];
+      out[index * 2 + 1] = -input[index * 2 + 1];
+    }
+  *output = out;
+}
+
+/**
+ * @brief Add a scalar number to each of the elements of a given complex array.
+ *
+ * @param input
+ * @param size
+ * @param scalar
+ * @param output
+ */
+void
+gal_complex_array_add_scalar (gsl_const_complex_packed_array input,
+                              size_t size, gsl_complex scalar,
+                              gsl_complex_packed_array *output)
+{
+  gsl_complex_packed_array out;
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "product");
+
+  /* Iterate over the array: add the scalar to each element */
+  for (size_t index = 0; index < size; index++)
+    {
+      out[index * 2] = input[index * 2] + GSL_REAL (scalar);
+      out[index * 2 + 1] = input[index * 2 + 1] + GSL_IMAG (scalar);
+    }
+  *output = out;
+}
+
+/**
+ * @brief Function to generate a padding in the kernel (adapt the image if
+ * needed) and converts them from real images to complex ones
+ *
+ * @param image
+ * @param kernel
+ * @param output
+ */
+void
+gal_complex_array_create_padding (const gal_data_t *image,
+                                  const gal_data_t *kernel,
+                                  gsl_complex_packed_array *outputimage,
+                                  gsl_complex_packed_array *outputkernel,
+                                  size_t *xdim, size_t *ydim)
+{
+  size_t padsizex, padsizey, totalsize;
+  size_t imgsizeX = image->dsize[0];
+  size_t imgsizeY = image->dsize[1];
+  size_t kernelsizeX = kernel->dsize[0];
+  size_t kernelsizeY = kernel->dsize[1];
+  float *imagepointer = image->array;
+  float *kernelpointer = kernel->array;
+  gsl_complex_packed_array pimg;    // pointer to the new image
+  gsl_complex_packed_array pkernel; // pointer to the new kernel
+
+  // It's better to have a odd dimension x odd dimension space (so kernel will
+  // be centered)
+  if (imgsizeX % 2 == 0)
+    {
+      padsizex = imgsizeX - 1;
+    }
+  else
+    {
+      padsizex = imgsizeX;
+    }
+
+  if (imgsizeY % 2 == 0)
+    {
+      padsizey = imgsizeY - 1;
+    }
+  else
+    {
+      padsizey = imgsizeY;
+    }
+  totalsize = padsizex * padsizey;
+
+  // Allocate the image and fill it
+  pimg = gal_pointer_allocate (GAL_TYPE_COMPLEX64, totalsize, 1, __func__,
+                               "pimg");
+  for (size_t x = 0; x < padsizex; x++)
+    {
+      for (size_t y = 0; y < padsizey; y++)
+        {
+          // base image index
+          size_t index = imgsizeY * x + y;
+          // output image index
+          size_t indexcomplex = (padsizey * x + y) * 2;
+          pimg[indexcomplex] = (double)imagepointer[index];
+          pimg[indexcomplex + 1] = 0.0;
+        }
+    }
+
+  // Allocate the kernel in the center and fill it
+  pkernel = gal_pointer_allocate (GAL_TYPE_COMPLEX64, totalsize, 1, __func__,
+                                  "pkernel");
+  for (size_t x = 0; x < kernelsizeX; x++)
+    {
+      for (size_t y = 0; y < kernelsizeY; y++)
+        {
+          // index for the kernel
+          size_t kindex = y + x * kernelsizeX;
+          // index for the kernel position in the image
+          size_t index = (x + padsizex / 2 - kernelsizeX / 2) * padsizex
+                         + (y + padsizey / 2 - kernelsizeY / 2);
+          pkernel[index * 2] = kernelpointer[kindex];
+        }
+    }
+  // Assign values
+  *xdim = padsizex;
+  *ydim = padsizey;
+  *outputimage = pimg;
+  *outputkernel = pkernel;
+}
+
+/**
+ * @brief Normalize an array (inplace)
+ *
+ * @param inout
+ * @param size
+ */
+void
+gal_complex_array_normalize (gsl_complex_packed_array inout, size_t size)
+{
+  double cumulativesume = gal_complex_array_module (inout, size);
+  if (cumulativesume == 0.0)
+    {
+      error (EXIT_FAILURE, 0, "%s: error: the module can't be 0", __func__);
+    }
+  for (size_t index = 0; index < size; index++)
+    {
+      inout[index * 2] /= cumulativesume;
+      inout[index * 2 + 1] /= cumulativesume;
+    }
+}
+
+/**
+ * @brief Function to calculate the total module of an array.
+ *
+ * @param input target array
+ * @param size
+ * @return double
+ */
+double
+gal_complex_array_module (gsl_complex_packed_array input, size_t size)
+{
+  double cumulativesume = 0.0;
+  for (size_t index = 0; index < size; index++)
+    {
+      cumulativesume
+          += gsl_complex_abs (input[index * 2] + I * input[index * 2 + 1]);
+    }
+  return cumulativesume;
+}
