@@ -20,7 +20,8 @@
 
 void
 gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
-                            double lambda, gal_data_t **output)
+                            double lambda, size_t numthreads,
+                            gal_data_t **output)
 {
   gsl_complex_packed_array imagepadding;  // original image after padding
   gsl_complex_packed_array psfpadding;    // kernel after padding
@@ -46,10 +47,10 @@ gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   size = dsize[0] * dsize[1];
   gal_complex_array_normalize (psfpadding, size);
   gal_fft_swap_quadrant (psfpadding, dsize);
-  gal_fft_two_dimension_transformation (psfpadding, dsize, &psffreq, 1,
-                                        gsl_fft_forward);
-  gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq, 1,
-                                        gsl_fft_forward);
+  gal_fft_two_dimension_transformation (psfpadding, dsize, &psffreq,
+                                        numthreads, gsl_fft_forward);
+  gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq,
+                                        numthreads, gsl_fft_forward);
   gal_complex_array_conjugate (psffreq, size, &psffconj);
   gal_complex_array_multiply (psffreq, psffconj, &psffreqsquare, size);
   gal_complex_array_multiply (psffreq, imagefreq, &numerator, size);
@@ -57,8 +58,8 @@ gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                                 &denominator);
   gal_complex_array_divide (numerator, denominator, &deconvolutionfreq, size,
                             lambda);
-  gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
-                                        &deconvolution, 1, gsl_fft_backward);
+  gal_fft_two_dimension_transformation (
+      deconvolutionfreq, dsize, &deconvolution, numthreads, gsl_fft_backward);
   gal_complex_array_to_real (deconvolution, dsize[0] * dsize[1],
                              COMPLEX_TO_REAL_REAL, &tmp);
   data

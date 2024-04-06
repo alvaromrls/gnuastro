@@ -59,7 +59,7 @@ main (int argc, char *argv[])
   // gal_complex_to_real (d.kernelpadding, d.sizex * d.sizey,
   //                      COMPLEX_TO_REAL_REAL, &tmp);
   // data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
-  gal_deconvolution_tikhonov (p.input, p.kernel, 0.0001, &data);
+  gal_deconvolution_tikhonov (p.input, p.kernel, 100, p.cp.numthreads, &data);
 
   gal_fits_img_write (data, "deconvolution.fits", NULL, 0);
   free (data);

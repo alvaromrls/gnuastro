@@ -31,6 +31,6 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 void gal_deconvolution_tikhonov (const gal_data_t *image,
                                  const gal_data_t *PSF, double lambda,
-                                 gal_data_t **output);
+                                 size_t numthreads, gal_data_t **output);
 
 #endif

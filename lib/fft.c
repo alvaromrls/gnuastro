@@ -33,7 +33,7 @@ void gal_fft_init (fftparams **params, size_t numthreads, size_t *dim,
                    gsl_const_complex_packed_array input,
                    gsl_complex_packed_array output, gsl_fft_direction sign);
 void gal_fft_free (fftparams *params, size_t numthreads);
-void gal_fft_one_direction (void *p);
+void *gal_fft_one_direction (void *p);
 
 /**
  * @brief Function to initialize all FFT structures needed for a 2D FFT
@@ -123,6 +123,10 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
   fftparams *params;
   size_t size = dim[0] * dim[1];
   char *mmapname = NULL;
+  size_t nb = numthreads + 1; // This running thread also counts
+  pthread_t t;                /* All thread ids saved in this, not used. */
+  pthread_attr_t attr;        // Used for multithread barrier
+  pthread_barrier_t b;        // Used for multithread barrier
   size_t *thrds, thrdscols;
 
   /* Allocate the space for the output array. */
@@ -137,13 +141,31 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
                                           &thrds, &thrdscols);
   if (numthreads == 1)
     {
-      params[0].stride = 1;
-      params[0].indexs = thrds;
+      params->stride = 1;
+      params->indexs = thrds;
       gal_fft_one_direction (params);
     }
   else
     {
-      // todo
+      gal_threads_attr_barrier_init (&attr, &b, nb);
+      for (size_t i = 0; i < numthreads; ++i)
+        if (thrds[i * thrdscols] != GAL_BLANK_SIZE_T)
+          {
+            params[i].id = i;
+            params[i].b = &b;
+            params[i].stride = 1; /* On each row, stride=1 */
+            params[i].indexs = &thrds[i * thrdscols];
+            int err = pthread_create (&t, &attr, gal_fft_one_direction,
+                                      &params[i]);
+            if (err)
+              error (EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
+                     __func__, i);
+          }
+
+      /* Wait for all threads to finish and free the spaces. */
+      pthread_barrier_wait (&b);
+      pthread_attr_destroy (&attr);
+      pthread_barrier_destroy (&b);
     }
 
   /* Clean up. */
@@ -161,13 +183,31 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
                                           &thrds, &thrdscols);
   if (numthreads == 1)
     {
-      params[0].stride = dim[0];
-      params[0].indexs = thrds;
+      params->stride = dim[0];
+      params->indexs = thrds;
       gal_fft_one_direction (params);
     }
   else
     {
-      // todo
+      gal_threads_attr_barrier_init (&attr, &b, nb);
+      for (size_t i = 0; i < numthreads; ++i)
+        if (thrds[i * thrdscols] != GAL_BLANK_SIZE_T)
+          {
+            params[i].id = i;
+            params[i].b = &b;
+            params[i].stride = dim[0]; /* On each column, stride=X dimension */
+            params[i].indexs = &thrds[i * thrdscols];
+            int err = pthread_create (&t, &attr, gal_fft_one_direction,
+                                      &params[i]);
+            if (err)
+              error (EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
+                     __func__, i);
+          }
+
+      /* Wait for all threads to finish and free the spaces. */
+      pthread_barrier_wait (&b);
+      pthread_attr_destroy (&attr);
+      pthread_barrier_destroy (&b);
     }
   /* Clean up. */
   if (mmapname)
@@ -196,7 +236,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
  *
  * @param p
  */
-void
+void *
 gal_fft_one_direction (void *p)
 {
   fftparams *params = (fftparams *)p;
@@ -229,6 +269,14 @@ gal_fft_one_direction (void *p)
       gsl_fft_complex_transform (data, params->stride, lenght, wavetable, work,
                                  params->sign);
     }
+
+  /* Wait until all other threads finish. */
+  if (params->b != NULL)
+    {
+      pthread_barrier_wait (params->b);
+    }
+
+  return NULL;
 }
 
 /**
@@ -261,8 +309,11 @@ gal_fft_swap_quadrant (gsl_complex_packed_array kernel, size_t *dim)
     {
       for (size_t y = 0; y < quadrantysize; y++)
         {
+          // index equivalent in buffer
           size_t indexb = (x * quadrantxsize + y) * 2;
+          // index equivalent in 1st quadrant
           size_t index1 = (x * dim[0] + y) * 2;
+          // index equivalent in 3rd quadrant
           size_t index3
               = ((x + quadrantxsize) * dim[0] + y + quadrantysize) * 2;
           buffer[indexb] = kernel[index1];
@@ -276,8 +327,11 @@ gal_fft_swap_quadrant (gsl_complex_packed_array kernel, size_t *dim)
     {
       for (size_t y = 0; y < quadrantysize; y++)
         {
+          // index equivalent in buffer
           size_t indexb = (x * quadrantxsize + y) * 2;
+          // index equivalent in 2nd quadrant
           size_t index2 = (x * dim[0] + y + quadrantysize) * 2;
+          // index equivalent in 4th quadrant
           size_t index4 = ((x + quadrantxsize) * dim[0] + y) * 2;
           buffer[indexb] = kernel[index2];
           kernel[index2] = kernel[index4];
