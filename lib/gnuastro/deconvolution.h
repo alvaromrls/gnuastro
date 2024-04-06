@@ -1,5 +1,5 @@
 /*********************************************************************
-Functions to interface with DS9 files.
+Functions for deconvolution operations.
 This is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
@@ -23,11 +23,9 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAL_DECONVOLUTION_H__
 #define __GAL_DECONVOLUTION_H__
 
-#include <gnuastro/data.h>
+#include <config.h>
 
-#include <complex.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <gnuastro/data.h>
 
 void gal_deconvolution_tikhonov (const gal_data_t *image,
                                  const gal_data_t *PSF, double lambda,
