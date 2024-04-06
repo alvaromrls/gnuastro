@@ -118,6 +118,7 @@ libgnuastro_la_SOURCES = \
   deconvolution.c \
   ds9.c \
   eps.c \
+  fft.c \
   fit.c \
   fits.c \
   git.c \
@@ -174,6 +175,7 @@ pkginclude_HEADERS = gnuastro/config.h \
   $(headersdir)/deconvolution.h \
   $(headersdir)/ds9.h \
   $(headersdir)/eps.h \
+  $(headersdir)/fft.h \
   $(headersdir)/fit.h \
   $(headersdir)/fits.h \
   $(headersdir)/git.h \

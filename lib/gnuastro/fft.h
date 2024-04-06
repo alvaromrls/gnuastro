@@ -1,5 +1,5 @@
 /*********************************************************************
-Functions to interface with DS9 files.
+Functions to perform Fast Fourier Transformations (fft).
 This is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
@@ -20,17 +20,36 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 **********************************************************************/
-#ifndef __GAL_DECONVOLUTION_H__
-#define __GAL_DECONVOLUTION_H__
+#ifndef __GAL_FFT_H__
+#define __GAL_FFT_H__
+#include <config.h>
 
-#include <gnuastro/data.h>
+#include <gnuastro/complexarray.h>
+#include <gsl/gsl_fft_complex.h>
 
-#include <complex.h>
-#include <stdio.h>
-#include <stdlib.h>
+#define MIN_MAP_SIZE 9223372036854775807UL
 
-void gal_deconvolution_tikhonov (const gal_data_t *image,
-                                 const gal_data_t *PSF, double lambda,
-                                 gal_data_t **output);
+typedef struct
+{
+  size_t id;
+  size_t stride;
+  gsl_fft_complex_wavetable *xwave;
+  gsl_fft_complex_wavetable *ywave;
+  gsl_fft_complex_workspace *xwork;
+  gsl_fft_complex_workspace *ywork;
+  size_t *indexs;
+  pthread_barrier_t *b;
+  gsl_const_complex_packed_array input;
+  size_t *dim;
+  gsl_complex_packed_array output;
+  gsl_fft_direction sign;
+} fftparams;
+
+void gal_fft_two_dimension_transformation (
+    gsl_const_complex_packed_array input, size_t *dim,
+    gsl_complex_packed_array *output, size_t numthreads,
+    gsl_fft_direction sign);
+
+void gal_fft_swap_quadrant (gsl_complex_packed_array kernel, size_t *dim);
 
 #endif
