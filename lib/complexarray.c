@@ -114,12 +114,30 @@ gal_complex_array_multiply (gsl_complex_packed_array first,
 }
 
 /**
+ * @brief Function to multiply each element by a given double value (inplace)
+ *
+ * @param inout array to apply the function
+ * @param value to multiply the array
+ * @param size total number of elements in the array.
+ */
+void
+gal_complex_array_scale (gsl_complex_packed_array inout, double value,
+                         size_t size)
+{
+  for (size_t index = 0; index < size; index++)
+    {
+      inout[index * 2] *= value;
+      inout[index * 2 + 1] *= value;
+    }
+}
+
+/**
  * @brief Perform an element-wise division of two complex arrays.
  *
  * @param first dividend.
  * @param second divisor.
  * @param output a pointer to pointer for the new data.
- * @param size total number of element in the array.
+ * @param size total number of elements in the array.
  * @param minValue if divisor is less than this value, the result will be 0.
  */
 void
@@ -306,11 +324,7 @@ gal_complex_array_normalize (gsl_complex_packed_array inout, size_t size)
     {
       error (EXIT_FAILURE, 0, "%s: error: the module can't be 0", __func__);
     }
-  for (size_t index = 0; index < size; index++)
-    {
-      inout[index * 2] /= cumulativesume;
-      inout[index * 2 + 1] /= cumulativesume;
-    }
+  gal_complex_array_scale (inout, 1.0 / cumulativesume, size);
 }
 
 /**

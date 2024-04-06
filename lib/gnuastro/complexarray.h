@@ -53,6 +53,9 @@ void gal_complex_array_multiply (gsl_complex_packed_array first,
                                  gsl_complex_packed_array *output,
                                  size_t size);
 
+void gal_complex_array_scale (gsl_complex_packed_array inout, double value,
+                              size_t size);
+
 void gal_complex_array_divide (gsl_complex_packed_array first,
                                gsl_complex_packed_array second,
                                gsl_complex_packed_array *output, size_t size,

@@ -127,7 +127,6 @@ gal_two_dimension_fft (gsl_const_complex_packed_array input, size_t *dim,
   out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__, "outf");
   printf ("init fft params\n");
   memcpy (out, input, size * sizeof (gsl_complex_packed_array) * 2);
-  *output = out;
   gal_fft_init (&params, numthreads, dim, input, out, sign);
 
   /* 1D FFT on each row. */
@@ -176,8 +175,13 @@ gal_two_dimension_fft (gsl_const_complex_packed_array input, size_t *dim,
     {
       free (thrds);
     }
+  if (sign == gsl_fft_backward)
+    {
+      gal_complex_array_scale (out, (1.0 / (double)size), size);
+    }
   printf ("clean fft params\n");
   gal_fft_free (params, numthreads);
+  *output = out;
 }
 
 void
@@ -241,7 +245,6 @@ gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   gal_complex_array_normalize (psfpadding, size);
   gal_swap_quadrant (psfpadding, dsize);
   gal_two_dimension_fft (psfpadding, dsize, &psffreq, 1, gsl_fft_forward);
-
   gal_two_dimension_fft (imagepadding, dsize, &imagefreq, 1, gsl_fft_forward);
   gal_complex_array_conjugate (psffreq, size, &psffconj);
   gal_complex_array_multiply (psffreq, psffconj, &psffreqsquare, size);
