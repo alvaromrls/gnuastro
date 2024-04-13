@@ -29,11 +29,31 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/pointer.h>
 #include <gnuastro/threads.h>
 
-void gal_fft_init (fftparams **params, size_t numthreads, size_t *dim,
-                   gsl_const_complex_packed_array input,
-                   gsl_complex_packed_array output, gsl_fft_direction sign);
-void gal_fft_free (fftparams *params, size_t numthreads);
-void *gal_fft_one_direction (void *p);
+/**
+ * @brief Struct used to pass parameters to fft_one_direction. Should be
+ * initialized by fft_init and cleaned with fft_free
+ */
+typedef struct
+{
+  size_t id;
+  size_t stride;
+  gsl_fft_complex_wavetable *xwave;
+  gsl_fft_complex_wavetable *ywave;
+  gsl_fft_complex_workspace *xwork;
+  gsl_fft_complex_workspace *ywork;
+  size_t *indexs;
+  pthread_barrier_t *b;
+  gsl_const_complex_packed_array input;
+  size_t *dim;
+  gsl_complex_packed_array output;
+  gsl_fft_direction sign;
+} fft_params;
+
+static void fft_init (fft_params **params, size_t numthreads, size_t *dim,
+                      gsl_const_complex_packed_array input,
+                      gsl_complex_packed_array output, gsl_fft_direction sign);
+static void fft_free (fft_params *params, size_t numthreads);
+static void *fft_one_direction (void *p);
 
 /**
  * @brief Function to initialize all FFT structures needed for a 2D FFT
@@ -46,21 +66,21 @@ void *gal_fft_one_direction (void *p);
  * @param sign
  */
 void
-gal_fft_init (fftparams **params, size_t numthreads, size_t *dim,
-              gsl_const_complex_packed_array input,
-              gsl_complex_packed_array output, gsl_fft_direction sign)
+fft_init (fft_params **params, size_t numthreads, size_t *dim,
+          gsl_const_complex_packed_array input,
+          gsl_complex_packed_array output, gsl_fft_direction sign)
 {
-  fftparams *buffer;
+  fft_params *buffer;
   gsl_fft_complex_wavetable *xwave;
   gsl_fft_complex_wavetable *ywave;
 
-  /* Allocate the fftparams array. */
+  /* Allocate the fft_params array. */
   errno = 0;
-  buffer = malloc (numthreads * sizeof (fftparams));
+  buffer = malloc (numthreads * sizeof (fft_params));
   if (buffer == NULL)
     {
       error (EXIT_FAILURE, errno, "%s: allocating %zu bytes for fp", __func__,
-             numthreads * sizeof (fftparams));
+             numthreads * sizeof (fft_params));
     }
 
   xwave = gsl_fft_complex_wavetable_alloc (dim[0]);
@@ -89,7 +109,7 @@ gal_fft_init (fftparams **params, size_t numthreads, size_t *dim,
  * @param numthreads
  */
 void
-gal_fft_free (fftparams *params, size_t numthreads)
+fft_free (fft_params *params, size_t numthreads)
 {
   gsl_fft_complex_wavetable_free (params[0].xwave);
   gsl_fft_complex_wavetable_free (params[0].ywave);
@@ -120,7 +140,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
                                       gsl_fft_direction sign)
 {
   double *out; // Easier var to access than output
-  fftparams *params;
+  fft_params *params;
   size_t size = dim[0] * dim[1];
   char *mmapname = NULL;
   size_t nb = numthreads + 1; // This running thread also counts
@@ -134,7 +154,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
   memcpy (out, input, size * sizeof (gsl_complex_packed_array) * 2);
 
   /* Init the fft needed parameters. */
-  gal_fft_init (&params, numthreads, dim, input, out, sign);
+  fft_init (&params, numthreads, dim, input, out, sign);
 
   /* 1D FFT on each row. */
   mmapname = gal_threads_dist_in_threads (dim[0], numthreads, MIN_MAP_SIZE, 0,
@@ -143,7 +163,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
     {
       params->stride = 1;
       params->indexs = thrds;
-      gal_fft_one_direction (params);
+      fft_one_direction (params);
     }
   else
     {
@@ -155,8 +175,8 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
             params[i].b = &b;
             params[i].stride = 1; /* On each row, stride=1 */
             params[i].indexs = &thrds[i * thrdscols];
-            int err = pthread_create (&t, &attr, gal_fft_one_direction,
-                                      &params[i]);
+            int err
+                = pthread_create (&t, &attr, fft_one_direction, &params[i]);
             if (err)
               error (EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
                      __func__, i);
@@ -185,7 +205,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
     {
       params->stride = dim[0];
       params->indexs = thrds;
-      gal_fft_one_direction (params);
+      fft_one_direction (params);
     }
   else
     {
@@ -197,8 +217,8 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
             params[i].b = &b;
             params[i].stride = dim[0]; /* On each column, stride=X dimension */
             params[i].indexs = &thrds[i * thrdscols];
-            int err = pthread_create (&t, &attr, gal_fft_one_direction,
-                                      &params[i]);
+            int err
+                = pthread_create (&t, &attr, fft_one_direction, &params[i]);
             if (err)
               error (EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
                      __func__, i);
@@ -226,7 +246,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
     }
 
   /* Free FFT resources. */
-  gal_fft_free (params, numthreads);
+  fft_free (params, numthreads);
   *output = out;
 }
 
@@ -237,9 +257,9 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
  * @param p
  */
 void *
-gal_fft_one_direction (void *p)
+fft_one_direction (void *p)
 {
-  fftparams *params = (fftparams *)p;
+  fft_params *params = (fft_params *)p;
   size_t lenght;
   size_t indmultip;
   size_t *indexs = params->indexs;

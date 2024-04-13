@@ -29,22 +29,6 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 #define MIN_MAP_SIZE 9223372036854775807UL
 
-typedef struct
-{
-  size_t id;
-  size_t stride;
-  gsl_fft_complex_wavetable *xwave;
-  gsl_fft_complex_wavetable *ywave;
-  gsl_fft_complex_workspace *xwork;
-  gsl_fft_complex_workspace *ywork;
-  size_t *indexs;
-  pthread_barrier_t *b;
-  gsl_const_complex_packed_array input;
-  size_t *dim;
-  gsl_complex_packed_array output;
-  gsl_fft_direction sign;
-} fftparams;
-
 void gal_fft_two_dimension_transformation (
     gsl_const_complex_packed_array input, size_t *dim,
     gsl_complex_packed_array *output, size_t numthreads,
