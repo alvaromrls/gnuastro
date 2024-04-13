@@ -74,6 +74,7 @@ void gal_complex_create_padding (const gal_data_t *image,
 
 void gal_complex_normalize (gsl_complex_packed_array inout, size_t size);
 
-double gal_complex_module (gsl_complex_packed_array input, size_t size);
+double gal_complex_cumulative_sum (gsl_complex_packed_array input,
+                                   size_t size);
 
 #endif

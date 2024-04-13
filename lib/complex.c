@@ -316,7 +316,7 @@ gal_complex_create_padding (const gal_data_t *image, const gal_data_t *kernel,
 void
 gal_complex_normalize (gsl_complex_packed_array inout, size_t size)
 {
-  double cumulativesume = gal_complex_module (inout, size);
+  double cumulativesume = gal_complex_cumulative_sum (inout, size);
   if (cumulativesume == 0.0)
     {
       error (EXIT_FAILURE, 0, "%s: error: the module can't be 0", __func__);
@@ -325,14 +325,14 @@ gal_complex_normalize (gsl_complex_packed_array inout, size_t size)
 }
 
 /**
- * @brief Function to calculate the total module of an array.
+ * @brief Function to calculate cumulative sum of an array.
  *
  * @param input target array
  * @param size
  * @return double
  */
 double
-gal_complex_module (gsl_complex_packed_array input, size_t size)
+gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
 {
   double cumulativesume = 0.0;
   for (size_t index = 0; index < size; index++)
