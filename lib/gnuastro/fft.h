@@ -24,7 +24,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #define __GAL_FFT_H__
 #include <config.h>
 
-#include <gnuastro/complexarray.h>
+#include <gnuastro/complex.h>
 #include <gsl/gsl_fft_complex.h>
 
 #define MIN_MAP_SIZE 9223372036854775807UL

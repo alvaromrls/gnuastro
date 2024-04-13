@@ -111,7 +111,7 @@ libgnuastro_la_SOURCES = \
   box.c \
   checkset.c \
   color.c \
-  complexarray.c \
+  complex.c \
   convolve.c \
   cosmology.c \
   data.c \
@@ -167,7 +167,7 @@ pkginclude_HEADERS = gnuastro/config.h \
   $(headersdir)/blank.h \
   $(headersdir)/box.h \
   $(headersdir)/color.h \
-  $(headersdir)/complexarray.h \
+  $(headersdir)/complex.h \
   $(headersdir)/convolve.h \
   $(headersdir)/cosmology.h \
   $(headersdir)/data.h \

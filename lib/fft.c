@@ -222,7 +222,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
   /* FFT Backward correction. */
   if (sign == gsl_fft_backward)
     {
-      gal_complex_array_scale (out, (1.0 / (double)size), size);
+      gal_complex_scale (out, (1.0 / (double)size), size);
     }
 
   /* Free FFT resources. */

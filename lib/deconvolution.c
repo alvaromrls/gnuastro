@@ -28,7 +28,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <string.h>
 
-#include <gnuastro/complexarray.h>
+#include <gnuastro/complex.h>
 #include <gnuastro/deconvolution.h>
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
@@ -71,12 +71,12 @@ gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
     error (EXIT_FAILURE, 0, "%s: input data must be float 64", __func__);
 
   /* Process the image and kernel to have same size and be complex numbers. */
-  gal_complex_array_create_padding (image, PSF, &imagepadding, &psfpadding,
-                                    dsize, &dsize[1]);
+  gal_complex_create_padding (image, PSF, &imagepadding, &psfpadding, dsize,
+                              &dsize[1]);
   size = dsize[0] * dsize[1]; // Total number of elements.
 
   /* Normalize and rearange the kernel. */
-  gal_complex_array_normalize (psfpadding, size);
+  gal_complex_normalize (psfpadding, size);
   gal_fft_swap_quadrant (psfpadding, dsize);
 
   /* Convert to frequency domain. */
@@ -86,25 +86,24 @@ gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                                         numthreads, gsl_fft_forward);
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
-  gal_complex_array_conjugate (psffreq, size, &psffconj);
-  gal_complex_array_multiply (psffreq, imagefreq, &numerator, size);
+  gal_complex_conjugate (psffreq, size, &psffconj);
+  gal_complex_multiply (psffreq, imagefreq, &numerator, size);
 
   /* Caculate denominator |PSF(u,v)|^2 + λ */
-  gal_complex_array_multiply (psffreq, psffconj, &psffreqsquare, size);
-  gal_complex_array_add_scalar (psffreqsquare, size, lambda + I * 0,
-                                &denominator);
+  gal_complex_multiply (psffreq, psffconj, &psffreqsquare, size);
+  gal_complex_add_scalar (psffreqsquare, size, lambda + I * 0, &denominator);
 
   /* Calculate the deconvolve image (in frequency domain).*/
-  gal_complex_array_divide (numerator, denominator, &deconvolutionfreq, size,
-                            lambda);
+  gal_complex_divide (numerator, denominator, &deconvolutionfreq, size,
+                      lambda);
 
   /* Go back to time domain. */
   gal_fft_two_dimension_transformation (
       deconvolutionfreq, dsize, &deconvolution, numthreads, gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
-  gal_complex_array_to_real (deconvolution, dsize[0] * dsize[1],
-                             COMPLEX_TO_REAL_REAL, &tmp);
+  gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
+                       COMPLEX_TO_REAL_REAL, &tmp);
   data
       = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, MIN_MAP_SIZE,
                         1, NULL, NULL, NULL); // data has to be 32

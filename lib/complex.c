@@ -24,7 +24,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 #include <error.h>
 
-#include <gnuastro/complexarray.h>
+#include <gnuastro/complex.h>
 #include <gnuastro/data.h>
 #include <gnuastro/pointer.h>
 
@@ -37,8 +37,8 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  * @param output a pointer to pointer for the new data
  */
 void
-gal_complex_array_to_real (gsl_complex_packed_array complexarray, size_t size,
-                           complex_to_real action, double **output)
+gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
+                     complex_to_real action, double **output)
 {
   double *out; // Easier var to work with than output
 
@@ -91,9 +91,9 @@ gal_complex_array_to_real (gsl_complex_packed_array complexarray, size_t size,
  * @param size total number of element in the array.
  */
 void
-gal_complex_array_multiply (gsl_complex_packed_array first,
-                            gsl_complex_packed_array second,
-                            gsl_complex_packed_array *output, size_t size)
+gal_complex_multiply (gsl_complex_packed_array first,
+                      gsl_complex_packed_array second,
+                      gsl_complex_packed_array *output, size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -121,8 +121,7 @@ gal_complex_array_multiply (gsl_complex_packed_array first,
  * @param size total number of elements in the array.
  */
 void
-gal_complex_array_scale (gsl_complex_packed_array inout, double value,
-                         size_t size)
+gal_complex_scale (gsl_complex_packed_array inout, double value, size_t size)
 {
   for (size_t index = 0; index < size; index++)
     {
@@ -141,10 +140,10 @@ gal_complex_array_scale (gsl_complex_packed_array inout, double value,
  * @param minValue if divisor is less than this value, the result will be 0.
  */
 void
-gal_complex_array_divide (gsl_complex_packed_array first,
-                          gsl_complex_packed_array second,
-                          gsl_complex_packed_array *output, size_t size,
-                          double minvalue)
+gal_complex_divide (gsl_complex_packed_array first,
+                    gsl_complex_packed_array second,
+                    gsl_complex_packed_array *output, size_t size,
+                    double minvalue)
 {
   gsl_complex_packed_array out;
 
@@ -182,8 +181,8 @@ gal_complex_array_divide (gsl_complex_packed_array first,
  * @param minValue if divisor is less than this value, the result will be 0.
  */
 void
-gal_complex_array_conjugate (gsl_const_complex_packed_array input, size_t size,
-                             gsl_complex_packed_array *output)
+gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size,
+                       gsl_complex_packed_array *output)
 {
   gsl_complex_packed_array out;
   /* Allocate the space for the output array. */
@@ -208,9 +207,8 @@ gal_complex_array_conjugate (gsl_const_complex_packed_array input, size_t size,
  * @param output
  */
 void
-gal_complex_array_add_scalar (gsl_const_complex_packed_array input,
-                              size_t size, gsl_complex scalar,
-                              gsl_complex_packed_array *output)
+gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
+                        gsl_complex scalar, gsl_complex_packed_array *output)
 {
   gsl_complex_packed_array out;
   /* Allocate the space for the output array. */
@@ -235,11 +233,10 @@ gal_complex_array_add_scalar (gsl_const_complex_packed_array input,
  * @param output
  */
 void
-gal_complex_array_create_padding (const gal_data_t *image,
-                                  const gal_data_t *kernel,
-                                  gsl_complex_packed_array *outputimage,
-                                  gsl_complex_packed_array *outputkernel,
-                                  size_t *xdim, size_t *ydim)
+gal_complex_create_padding (const gal_data_t *image, const gal_data_t *kernel,
+                            gsl_complex_packed_array *outputimage,
+                            gsl_complex_packed_array *outputkernel,
+                            size_t *xdim, size_t *ydim)
 {
   size_t padsizex, padsizey, totalsize;
   size_t imgsizeX = image->dsize[0];
@@ -317,14 +314,14 @@ gal_complex_array_create_padding (const gal_data_t *image,
  * @param size
  */
 void
-gal_complex_array_normalize (gsl_complex_packed_array inout, size_t size)
+gal_complex_normalize (gsl_complex_packed_array inout, size_t size)
 {
-  double cumulativesume = gal_complex_array_module (inout, size);
+  double cumulativesume = gal_complex_module (inout, size);
   if (cumulativesume == 0.0)
     {
       error (EXIT_FAILURE, 0, "%s: error: the module can't be 0", __func__);
     }
-  gal_complex_array_scale (inout, 1.0 / cumulativesume, size);
+  gal_complex_scale (inout, 1.0 / cumulativesume, size);
 }
 
 /**
@@ -335,7 +332,7 @@ gal_complex_array_normalize (gsl_complex_packed_array inout, size_t size)
  * @return double
  */
 double
-gal_complex_array_module (gsl_complex_packed_array input, size_t size)
+gal_complex_module (gsl_complex_packed_array input, size_t size)
 {
   double cumulativesume = 0.0;
   for (size_t index = 0; index < size; index++)
