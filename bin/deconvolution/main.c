@@ -33,22 +33,24 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include "ui.h"
 
 /* Main function. */
-int main(int argc, char *argv[]) {
+int
+main (int argc, char *argv[])
+{
   struct timeval t1;
-  struct deconvolution_params p = {{{0}, 0}, 0};
+  struct deconvolution_params p = { { { 0 }, 0 }, 0 };
 
   /* Set the starting time. */
-  time(&p.rawtime);
-  gettimeofday(&t1, NULL);
+  time (&p.rawtime);
+  gettimeofday (&t1, NULL);
 
   /* Read the input parameters. */
-  ui_read_check_inputs_setup(argc, argv, &p);
+  ui_read_check_inputs_setup (argc, argv, &p);
 
   /* Run Deconvolution. */
-  deconvolution(&p);
+  deconvolution (&p);
 
   /* Free all non-freed allocations. */
-  ui_free_report(&p, &t1);
+  ui_free_report (&p, &t1);
 
   /* Return successfully. */
   return EXIT_SUCCESS;

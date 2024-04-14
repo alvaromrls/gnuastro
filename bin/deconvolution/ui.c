@@ -26,8 +26,14 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <errno.h>
 #include <error.h>
 #include <stdio.h>
+#include <string.h>
 
+#include <gnuastro/list.h>
+
+#include <gnuastro/array.h>
 #include <gnuastro/fits.h>
+#include <gnuastro/threads.h>
+#include <gnuastro/wcs.h>
 
 #include <gnuastro-internal/checkset.h>
 #include <gnuastro-internal/fixedstringmacros.h>
@@ -59,9 +65,11 @@ const char doc[] = GAL_STRINGS_TOP_HELP_INFO PROGRAM_NAME
 /**************************************************************/
 /*********    Initialize & Parse command-line    **************/
 /**************************************************************/
-static void ui_initialize_options(struct deconvolution_params *p,
-                                  struct argp_option *program_options,
-                                  struct argp_option *gal_commonopts_options) {
+static void
+ui_initialize_options (struct deconvolution_params *p,
+                       struct argp_option *program_options,
+                       struct argp_option *gal_commonopts_options)
+{
   size_t i;
   struct gal_options_common_params *cp = &p->cp;
 
@@ -72,33 +80,29 @@ static void ui_initialize_options(struct deconvolution_params *p,
   cp->program_exec = PROGRAM_EXEC;
   cp->program_bibtex = PROGRAM_BIBTEX;
   cp->program_authors = PROGRAM_AUTHORS;
+  cp->numthreads = gal_threads_number ();
   cp->coptions = gal_commonopts_options;
 
   /* Modify common options. */
-  for (i = 0; !gal_options_is_last(&cp->coptions[i]); ++i) {
-    /* Select individually. */
-    switch (cp->coptions[i].key) {
-    case GAL_OPTIONS_KEY_SEARCHIN:
-    case GAL_OPTIONS_KEY_MINMAPSIZE:
-    case GAL_OPTIONS_KEY_TABLEFORMAT:
-      cp->coptions[i].mandatory = GAL_OPTIONS_MANDATORY;
-      break;
+  for (i = 0; !gal_options_is_last (&cp->coptions[i]); ++i)
+    {
+      /* Select individually. */
+      switch (cp->coptions[i].key)
+        {
+        case GAL_OPTIONS_KEY_HDU:
+        case GAL_OPTIONS_KEY_TYPE:
+        case GAL_OPTIONS_KEY_MINMAPSIZE:
+          cp->coptions[i].mandatory = GAL_OPTIONS_MANDATORY;
+          break;
+        }
     }
-
-    /* Select by group. */
-    switch (cp->coptions[i].group) {
-    case GAL_OPTIONS_GROUP_TESSELLATION:
-      cp->coptions[i].doc = NULL; /* Necessary to remove title. */
-      cp->coptions[i].flags = OPTION_HIDDEN;
-      break;
-    }
-  }
 }
 
 /* Parse a single option: */
-error_t parse_opt(int key, char *arg, struct argp_state *state) {
+error_t
+parse_opt (int key, char *arg, struct argp_state *state)
+{
   struct deconvolution_params *p = state->input;
-
   /* Pass 'gal_options_common_params' into the child parser. */
   state->child_inputs[0] = &p->cp;
 
@@ -109,28 +113,30 @@ error_t parse_opt(int key, char *arg, struct argp_state *state) {
      check if the first character of arg is the equal sign, then the
      user is warned and the program is stopped: */
   if (arg && arg[0] == '=')
-    argp_error(state, "incorrect use of the equal sign ('='). For short "
-                      "options, '=' should not be used and for long options, "
-                      "there should be no space between the option, equal sign "
-                      "and value");
+    argp_error (state,
+                "incorrect use of the equal sign ('='). For short "
+                "options, '=' should not be used and for long options, "
+                "there should be no space between the option, equal sign "
+                "and value");
 
   /* Set the key to this option. */
-  switch (key) {
-  /* Read the non-option tokens (arguments): */
-  case ARGP_KEY_ARG:
-    /* The user may give a shell variable that is empty! In that case
-       'arg' will be an empty string! We don't want to account for such
-       cases (and give a clear error that no input has been given). */
-    // if (p->inputname)
-    //   argp_error(state, "only one argument (input file) should be given");
-    // else if (arg[0] != '\0')
-    //   p->inputname = arg;
-    // break;
+  switch (key)
+    {
+    /* Read the non-option tokens (arguments): */
+    case ARGP_KEY_ARG:
+      /* The user may give a shell variable that is empty! In that case
+         'arg' will be an empty string! We don't want to account for such
+         cases (and give a clear error that no input has been given). */
+      if (p->filename)
+        argp_error (state, "only one argument (input file) should be given");
+      else if (arg[0] != '\0')
+        p->filename = arg;
+      break;
 
-  /* This is an option, set its value. */
-  default:
-    return gal_options_set_from_key(key, arg, p->cp.poptions, &p->cp);
-  }
+    /* This is an option, set its value. */
+    default:
+      return gal_options_set_from_key (key, arg, p->cp.poptions, &p->cp);
+    }
 
   return 0;
 }
@@ -140,36 +146,122 @@ error_t parse_opt(int key, char *arg, struct argp_state *state) {
 /**************************************************************/
 /* Check ONLY the options. When arguments are involved, do the check
    in 'ui_check_options_and_arguments'. */
-static void ui_check_only_options(struct deconvolution_params *p) {}
+static void
+ui_check_only_options (struct deconvolution_params *p)
+{
+  if (!strcmp ("tikhinov", p->algorithmstr))
+    {
+      p->algorithm = DECONVOLUTION_ALGORITHM_TIKHONOV;
+    }
+  else
+    {
+      error (EXIT_FAILURE, 0,
+             "Deconvolution algorithm not recognised (%s), "
+             "please use a valid one ",
+             p->algorithmstr);
+    }
+}
 
-static void ui_check_options_and_arguments(struct deconvolution_params *p) {
-  /* Make sure an input file name was given and if it was a FITS file, that
-     a HDU is also given. */
-  // if (p->inputname) {
-  //   /* Check if it exists. */
-  //   gal_checkset_check_file(p->inputname);
+static void
+ui_check_options_and_arguments (struct deconvolution_params *p)
+{
+  int kernel_type;
 
-  //   /* If it is FITS, a HDU is also mandatory. */
-  //   if (gal_fits_file_recognized(p->inputname) && p->cp.hdu == NULL)
-  //     error(EXIT_FAILURE, 0,
-  //           "no HDU specified. When the input is a FITS "
-  //           "file, a HDU must also be specified, you can use the '--hdu' "
-  //           "('-h') option and give it the HDU number (starting from "
-  //           "zero), extension name, or anything acceptable by CFITSIO");
-  // } else
-  //   error(EXIT_FAILURE, 0, "no input file is specified");
+  if (p->filename)
+    {
+      /* If input is FITS. */
+      if ((p->isfits = gal_fits_file_recognized (p->filename)))
+        {
+          /* Check if a HDU is given. */
+          if (p->cp.hdu == NULL)
+            error (EXIT_FAILURE, 0,
+                   "no HDU specified. When the input is a "
+                   "FITS file, a HDU must also be specified, you can use "
+                   "the '--hdu' ('-h') option and give it the HDU number "
+                   "(starting from zero), extension name, or anything "
+                   "acceptable by CFITSIO");
+
+          /* If its an image, make sure column isn't given (in case the
+             user confuses an image with a table). */
+          p->hdu_type = gal_fits_hdu_format (p->filename, p->cp.hdu, "--hdu");
+        }
+    }
+
+  if (p->kernelname)
+    {
+      /* If input is FITS. */
+      if (gal_fits_file_recognized (p->kernelname))
+        {
+          /* Check if a HDU is given. */
+          if (p->khdu == NULL)
+            error (EXIT_FAILURE, 0,
+                   "no HDU specified. When the kernel is a "
+                   "FITS file, a HDU must also be specified, you can use "
+                   "the '--khdu' ('-u') option and give it the HDU number "
+                   "(starting from zero), extension name, or anything "
+                   "acceptable by CFITSIO");
+
+          /* If its an image, make sure column isn't given (in case the
+             user confuses an image with a table). */
+          kernel_type = gal_fits_hdu_format (p->kernelname, p->khdu, "--khdu");
+        }
+    }
+}
+
+/* Read the input dataset. */
+static void
+ui_read_input (struct deconvolution_params *p)
+{
+  /* If the input is a FITS image or any recognized array file format, then
+     read it as an array, otherwise, as a table. */
+  if (p->filename && gal_array_name_recognized (p->filename))
+    if (p->isfits && p->hdu_type == IMAGE_HDU)
+      {
+        p->input = gal_array_read_one_ch_to_type (
+            p->filename, p->cp.hdu, NULL, INPUT_USE_TYPE, p->cp.minmapsize,
+            p->cp.quietmmap, "--hdu");
+        p->input->wcs
+            = gal_wcs_read (p->filename, p->cp.hdu, p->cp.wcslinearmatrix, 0,
+                            0, &p->input->nwcs, "--hdu");
+        p->input->ndim = gal_dimension_remove_extra (
+            p->input->ndim, p->input->dsize, p->input->wcs);
+      }
+}
+
+/* Read the kernel.  */
+static void
+ui_read_kernel (struct deconvolution_params *p)
+{
+  /* Read the image into file. */
+  if (p->kernelname && gal_array_name_recognized (p->kernelname))
+    {
+      p->kernel = gal_array_read_one_ch_to_type (
+          p->kernelname, p->khdu, NULL, INPUT_USE_TYPE, p->cp.minmapsize,
+          p->cp.quietmmap, "--khdu");
+      p->kernel->ndim = gal_dimension_remove_extra (
+          p->kernel->ndim, p->kernel->dsize, p->kernel->wcs);
+    }
 }
 
 /**************************************************************/
 /***************       Preparations         *******************/
 /**************************************************************/
-static void ui_preparations(struct deconvolution_params *p) {}
+
+static void
+ui_preparations (struct deconvolution_params *p)
+{
+  /* Read the input dataset. */
+  ui_read_input (p);
+  ui_read_kernel (p);
+}
 
 /**************************************************************/
 /************         Set the parameters          *************/
 /**************************************************************/
-void ui_read_check_inputs_setup(int argc, char *argv[],
-                                struct deconvolution_params *p) {
+void
+ui_read_check_inputs_setup (int argc, char *argv[],
+                            struct deconvolution_params *p)
+{
   struct gal_options_common_params *cp = &p->cp;
 
   /* Include the parameters necessary for argp from this program ('args.h')
@@ -179,46 +271,51 @@ void ui_read_check_inputs_setup(int argc, char *argv[],
      those headers which make them hard to read and modify. This also helps
      in having a clean environment: everything in those headers is only
      available within the scope of this function. */
-#include "args.h"
 #include <gnuastro-internal/commonopts.h>
 
+#include "args.h"
+
   /* Initialize the options and necessary information. */
-  ui_initialize_options(p, program_options, gal_commonopts_options);
+  ui_initialize_options (p, program_options, gal_commonopts_options);
 
   /* Read the command-line options and arguments. */
   errno = 0;
-  // if (argp_parse(&thisargp, argc, argv, 0, 0, p))
-  //   error(EXIT_FAILURE, errno, "parsing arguments");
+  if (argp_parse (&thisargp, argc, argv, 0, 0, p))
+    error (EXIT_FAILURE, errno, "parsing arguments");
 
   /* Read the configuration files and set the common values. */
-  gal_options_read_config_set(&p->cp);
+  gal_options_read_config_set (&p->cp);
 
   /* Sanity check only on options. */
-  ui_check_only_options(p);
+  ui_check_only_options (p);
 
   /* Print the option values if asked. Note that this needs to be done
      after the option checks so un-sane values are not printed in the
      output state. */
-  gal_options_print_state(&p->cp);
+  gal_options_print_state (&p->cp);
+  /* Prepare all the options as FITS keywords to write in output later. */
+  gal_options_as_fits_keywords (&p->cp);
 
   /* Check that the options and arguments fit well with each other. Note
      that arguments don't go in a configuration file. So this test should
      be done after (possibly) printing the option values. */
-  ui_check_options_and_arguments(p);
+  ui_check_options_and_arguments (p);
 
   /* Read/allocate all the necessary starting arrays. */
-  ui_preparations(p);
+  ui_preparations (p);
 }
 
 /**************************************************************/
 /************      Free allocated, report         *************/
 /**************************************************************/
-void ui_free_report(struct deconvolution_params *p, struct timeval *t1) {
+void
+ui_free_report (struct deconvolution_params *p, struct timeval *t1)
+{
   /* Free the allocated arrays. */
-  free(p->cp.hdu);
-  free(p->cp.output);
+  free (p->cp.hdu);
+  free (p->cp.output);
 
   /* Print the final message. */
   if (!p->cp.quiet)
-    gal_timing_report(t1, PROGRAM_NAME " finished in: ", 0);
+    gal_timing_report (t1, PROGRAM_NAME " finished in: ", 0);
 }

@@ -27,9 +27,28 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 #include <main.h>
 
+#include <gnuastro/deconvolution.h>
+
 /*******************************************************************/
 /*************            Top-level function           *************/
 /*******************************************************************/
-void deconvolution(struct deconvolution_params *p) {
-  printf("Hello World !!\n");
+void
+deconvolution (struct deconvolution_params *p)
+{
+  gal_data_t *data = NULL;
+
+  switch (p->algorithm)
+    {
+    case DECONVOLUTION_ALGORITHM_TIKHONOV:
+      printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
+      gal_deconvolution_tikhonov (p->input, p->kernel, p->lambda,
+                                  p->cp.numthreads, &data);
+      break;
+
+    default:
+      break;
+    }
+
+  gal_fits_img_write (data, "deconvolution.fits", NULL, 0);
+  free (data);
 }

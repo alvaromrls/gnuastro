@@ -33,16 +33,34 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #define PROGRAM_EXEC "astdeconvolution" /* Program executable name. */
 #define PROGRAM_STRING PROGRAM_NAME " (" PACKAGE_NAME ") " PACKAGE_VERSION
 
+/* Macros */
+#define CONVFLOATINGPOINTERR 1e-10
+#define INPUT_USE_TYPE GAL_TYPE_FLOAT32
+
+typedef enum
+{
+  DECONVOLUTION_ALGORITHM_TIKHONOV,
+} DECONVOLUTION_ALGORITHM;
+
 /* Main program parameters structure */
-struct deconvolution_params {
+struct deconvolution_params
+{
   /* From command-line */
-  struct gal_options_common_params cp; /* Common parameters.           */
+  struct gal_options_common_params cp; /* Common parameters.   */
   char *filename;   /* Input filename.                         */
   char *kernelname; /* File name of kernel.                    */
   char *khdu;       /* HDU of kernel.                          */
-  float lambda;     /*Lambda value.                             */
+  char *algorithmstr;
+  double lambda; /*Lambda value for Tikhonov algorithm      */
+
+  /* Internal */
+  int isfits;   /* Input is a FITS file.                   */
+  int hdu_type; /* Type of HDU (image or table).           */
+  DECONVOLUTION_ALGORITHM algorithm;
+  gal_data_t *input;  /* Input image array.                      */
+  gal_data_t *kernel; /* Input Kernel array.                     */
   /* Output: */
-  time_t rawtime; /* Starting time of the program.           */
+  time_t rawtime; /* Starting time of the program.             */
 };
 
 #endif
