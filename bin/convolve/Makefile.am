@@ -32,8 +32,7 @@ bin_PROGRAMS = astconvolve
 
 ## Reason for linking with 'libgnu' described in 'bin/TEMPLATE/Makefile.am'.
 astconvolve_LDADD = $(top_builddir)/bootstrapped/lib/libgnu.la \
-                    $(top_builddir)/lib/libgnuastro.la \
-                    $(CONFIG_LDADD)
+                    -lgnuastro $(CONFIG_LDADD)
 
 astconvolve_SOURCES = main.c ui.c convolve.c
 
@@ -43,5 +42,4 @@ EXTRA_DIST = main.h authors-cite.h args.h ui.h convolve.h
 
 ## The configuration file (distribute and install).
 ## NOTE: the man page is created in doc/Makefile.am
-pkgsysconfdir = $(sysconfdir)/$(PACKAGE)
-dist_pkgsysconf_DATA = astconvolve.conf
+dist_sysconf_DATA = astconvolve.conf

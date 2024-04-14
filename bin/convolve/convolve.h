@@ -29,10 +29,10 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 struct fftonthreadparams
 {
   /* Operating info: */
-  size_t                id; /* The number of this thread.               */
+  size_t id;                /* The number of this thread.               */
   struct convolveparams *p; /* Pointer to main program structure.       */
-  int   forward1backwardn1; /* Operate on one or two images.            */
-  size_t            stride; /* 1D FFT on rows or columns?               */
+  int forward1backwardn1;   /* Operate on one or two images.            */
+  size_t stride;            /* 1D FFT on rows or columns?               */
 
   /* Pointers to GSL FFT structures: */
   gsl_fft_complex_wavetable *ps0wave;
@@ -41,13 +41,10 @@ struct fftonthreadparams
   gsl_fft_complex_workspace *ps1work;
 
   /* Thread parameters. */
-  size_t          *indexs;  /* Indexs to be used in this thread.        */
-  pthread_barrier_t    *b;  /* Barrier to keep threads waiting.         */
+  size_t *indexs;       /* Indexs to be used in this thread.        */
+  pthread_barrier_t *b; /* Barrier to keep threads waiting.         */
 };
 
-
-void
-convolve(struct convolveparams *p);
-
+void convolve(struct convolveparams *p);
 
 #endif

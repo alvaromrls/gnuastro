@@ -5,7 +5,7 @@ Convolve is part of GNU Astronomy Utilities (Gnuastro) package.
 Original author:
      Mohammad Akhlaghi <mohammad@akhlaghi.org>
 Contributing author(s):
-Copyright (C) 2015-2025 Free Software Foundation, Inc.
+Copyright (C) 2015-2021, Free Software Foundation, Inc.
 
 Gnuastro is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -45,7 +45,14 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 
 /* Enumerators */
+enum complex_to_real
+{
+  COMPLEX_TO_REAL_INVALID, /* ==0 by C standard. */
 
+  COMPLEX_TO_REAL_SPEC,
+  COMPLEX_TO_REAL_PHASE,
+  COMPLEX_TO_REAL_REAL,
+};
 
 enum domain_codes
 {
@@ -64,19 +71,18 @@ struct convolveparams
 {
   /* From command-line */
   struct gal_options_common_params cp; /* Common parameters.              */
-  char             *filename;  /* Name of input file.                     */
-  char               *column;  /* Name of column if input is a table.     */
-  char           *kernelname;  /* File name of kernel.                    */
-  char                 *khdu;  /* HDU of kernel.                          */
-  char         *kernelcolumn;  /* Column to read the input kernel.        */
-  uint8_t       nokernelflip;  /* Do not flip the kernel.                 */
-  uint8_t       nokernelnorm;  /* Do not normalize the kernel.            */
-  double        minsharpspec;  /* Deconvolution: min spect. of sharp img. */
-  uint8_t     checkfreqsteps;  /* View the frequency domain steps.        */
-  char            *domainstr;  /* String value specifying domain.         */
-  size_t          makekernel;  /* Make a kernel to create input.          */
-  uint8_t   noedgecorrection;  /* Do not correct spatial edge effects.    */
-  uint8_t      conv_on_blank;  /* Do convolution on blank pixels also.    */
+  char *filename;                      /* Name of input file.                     */
+  char *column;                        /* Name of column if input is a table.     */
+  char *kernelname;                    /* File name of kernel.                    */
+  char *khdu;                          /* HDU of kernel.                          */
+  char *kernelcolumn;                  /* Column to read the input kernel.        */
+  uint8_t nokernelflip;                /* Do not flip the kernel.                 */
+  uint8_t nokernelnorm;                /* Do not normalize the kernel.            */
+  double minsharpspec;                 /* Deconvolution: min spect. of sharp img. */
+  uint8_t checkfreqsteps;              /* View the frequency domain steps.        */
+  char *domainstr;                     /* String value specifying domain.         */
+  size_t makekernel;                   /* Make a kernel to create input.          */
+  uint8_t noedgecorrection;            /* Do not correct spatial edge effects.    */
 
   /* Internal */
   int                 isfits;  /* Input is a FITS file.                   */
