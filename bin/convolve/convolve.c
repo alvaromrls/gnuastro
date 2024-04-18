@@ -421,7 +421,7 @@ void correctdeconvolve(struct convolveparams *p, double **spatial)
       r = sqrt((ii - ci) * (ii - ci) + (jj - cj) * (jj - cj));
       sum += n[ii * ps1 + jj] = r < p->makekernel ? s[i * ps1 + j] : 0;
 
-      /*printf("(%zu, %zu) --> (%zu, %zu)\n", i, j, ii, jj);*/
+      /*printf("(%zu, %zu) --> (%zu, %zu)\n", i, j, ii, jj); */
     }
   }
 
@@ -430,9 +430,9 @@ void correctdeconvolve(struct convolveparams *p, double **spatial)
   df=(d=n)+ps0*ps1; do *d++/=sum; while(d<df);
 
 
-  /* Clean up: */
-  free(s);
-  *spatial = n;
+    /* Clean up. */
+    free(s);
+    *spatial = n;
 }
 
 
@@ -465,7 +465,7 @@ void correctdeconvolve(struct convolveparams *p, double **spatial)
   p->s1. In this case, those index values which are smaller than p->s0
   or p->s1 belong to the input image and those which are equal or
   larger than larger belong to the kernel image (after subtraction for
-  p->s0 or p->s1).*/
+  p->s0 or p->s1). */
 void *
 onedimensionfft(void *inparam)
 onedimensionfft(void *inparam)
@@ -811,7 +811,7 @@ void convolve_frequency(struct convolveparams *p)
 
 
 /******************************************************************/
-/*************          Outside function          *****************/
+/*************         Top-level function         *****************/
 /******************************************************************/
 void convolve(struct convolveparams *p)
 {
