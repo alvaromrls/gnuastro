@@ -5,7 +5,7 @@ Convolve is part of GNU Astronomy Utilities (Gnuastro) package.
 Original author:
      Mohammad Akhlaghi <mohammad@akhlaghi.org>
 Contributing author(s):
-Copyright (C) 2015-2021, Free Software Foundation, Inc.
+Copyright (C) 2015-2024 Free Software Foundation, Inc.
 
 Gnuastro is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -83,6 +83,7 @@ struct convolveparams
   char            *domainstr;  /* String value specifying domain.         */
   size_t          makekernel;  /* Make a kernel to create input.          */
   uint8_t   noedgecorrection;  /* Do not correct spatial edge effects.    */
+  uint8_t      conv_on_blank;  /* Do convolution on blank pixels also.    */
 
   /* Internal */
   int                 isfits;  /* Input is a FITS file.                   */
