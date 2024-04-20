@@ -46,7 +46,8 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  */
 void
 gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
-                         double lambda, size_t numthreads, gal_data_t **output)
+                         double lambda, size_t numthreads, size_t minmapsize,
+                         gal_data_t **output)
 {
   gsl_complex_packed_array imagepadding;  // original image after padding
   gsl_complex_packed_array psfpadding;    // kernel after padding
@@ -79,10 +80,11 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   gal_fft_swap_quadrant (psfpadding, dsize);
 
   /* Convert to frequency domain. */
-  gal_fft_two_dimension_transformation (psfpadding, dsize, &psffreq,
-                                        numthreads, gsl_fft_forward);
+  gal_fft_two_dimension_transformation (
+      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
   gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq,
-                                        numthreads, gsl_fft_forward);
+                                        numthreads, minmapsize,
+                                        gsl_fft_forward);
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
   gal_complex_conjugate (psffreq, size, &psffconj);
@@ -97,15 +99,15 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                       lambda);
 
   /* Go back to time domain. */
-  gal_fft_two_dimension_transformation (
-      deconvolutionfreq, dsize, &deconvolution, numthreads, gsl_fft_backward);
+  gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
+                                        &deconvolution, numthreads, minmapsize,
+                                        gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
   gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
                        COMPLEX_TO_REAL_REAL, &tmp);
-  data
-      = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, MIN_MAP_SIZE,
-                        1, NULL, NULL, NULL); // data has to be 32
+  data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
+                         1, NULL, NULL, NULL); // data has to be 32
   *output = data;
 
   /* Free resources. */

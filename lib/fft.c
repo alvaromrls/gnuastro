@@ -136,7 +136,7 @@ void
 gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
                                       size_t *dim,
                                       gsl_complex_packed_array *output,
-                                      size_t numthreads,
+                                      size_t numthreads, size_t minmapsize,
                                       gsl_fft_direction sign)
 {
   double *out; // Easier var to access than output
@@ -157,7 +157,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
   fft_init (&params, numthreads, dim, input, out, sign);
 
   /* 1D FFT on each row. */
-  mmapname = gal_threads_dist_in_threads (dim[0], numthreads, MIN_MAP_SIZE, 0,
+  mmapname = gal_threads_dist_in_threads (dim[0], numthreads, minmapsize, 0,
                                           &thrds, &thrdscols);
   if (numthreads == 1)
     {
@@ -199,7 +199,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
     }
 
   /* 1D FFT on each column. */
-  mmapname = gal_threads_dist_in_threads (dim[1], numthreads, MIN_MAP_SIZE, 0,
+  mmapname = gal_threads_dist_in_threads (dim[1], numthreads, minmapsize, 0,
                                           &thrds, &thrdscols);
   if (numthreads == 1)
     {

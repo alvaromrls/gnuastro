@@ -42,7 +42,7 @@ deconvolve (struct deconvolve_params *p)
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
       printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
       gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
-                               p->cp.numthreads, &data);
+                               p->cp.numthreads, p->cp.minmapsize, &data);
       break;
 
     default:
