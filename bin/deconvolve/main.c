@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+Deconvolve - A minimal set of files and functions to define a program.
+Deconvolve is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -20,33 +20,38 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 **********************************************************************/
-#ifndef UI_H
-#define UI_H
+#include <config.h>
 
-/* For common options groups. */
-#include <gnuastro-internal/options.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-/* Available letters for short options:
+#include <gnuastro-internal/timing.h>
 
-   a b c d e f g i j l n p r s t v w x y z
-   A B C E G H J Q R W X Y
-*/
-enum option_keys_enum
+#include "main.h"
+
+#include "deconvolve.h"
+#include "ui.h"
+
+/* Main function. */
+int
+main (int argc, char *argv[])
 {
-  /* With short-option version. */
-  UI_KEY_MULTIVALUE = 'm',
-  UI_KEY_ONOFF = 'O',
-  UI_KEY_KERNEL = 'k',
-  UI_KEY_KHDU = 'u',
-  UI_KEY_LAMBDA = 'L',
-  UI_KEY_ALGORITHM = 'A'
-  /* Only with long version (start with a value 1000, the rest will be set
-     automatically). */
-};
+  struct timeval t1;
+  struct deconvolve_params p = { { { 0 }, 0 }, 0 };
 
-void ui_read_check_inputs_setup (int argc, char *argv[],
-                                 struct deconvolution_params *p);
+  /* Set the starting time. */
+  time (&p.rawtime);
+  gettimeofday (&t1, NULL);
 
-void ui_free_report (struct deconvolution_params *p, struct timeval *t1);
+  /* Read the input parameters. */
+  ui_read_check_inputs_setup (argc, argv, &p);
 
-#endif
+  /* Run deconvolve. */
+  deconvolve (&p);
+
+  /* Free all non-freed allocations. */
+  ui_free_report (&p, &t1);
+
+  /* Return successfully. */
+  return EXIT_SUCCESS;
+}

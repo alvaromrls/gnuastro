@@ -29,7 +29,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 #include <gnuastro/complex.h>
-#include <gnuastro/deconvolution.h>
+#include <gnuastro/deconvolve.h>
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
 
@@ -45,9 +45,8 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  * @param output
  */
 void
-gal_deconvolution_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
-                            double lambda, size_t numthreads,
-                            gal_data_t **output)
+gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
+                         double lambda, size_t numthreads, gal_data_t **output)
 {
   gsl_complex_packed_array imagepadding;  // original image after padding
   gsl_complex_packed_array psfpadding;    // kernel after padding

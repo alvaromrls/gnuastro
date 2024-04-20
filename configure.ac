@@ -975,12 +975,12 @@ AC_ARG_ENABLE([crop],
               [AS_IF([test "x$enable_crop" != xno],
                      [enable_crop=yes; ayes=true])],
               [enable_crop=notset])
-AC_ARG_ENABLE([deconvolution],
-              [AS_HELP_STRING([--enable-deconvolution],
-                    [Install Deconvolution and other enabled programs.])],
-              [AS_IF([test "x$enable_deconvolution" != xno],
+AC_ARG_ENABLE([deconvolve],
+              [AS_HELP_STRING([--enable-deconvolve],
+                    [Install Deconvolve and other enabled programs.])],
+              [AS_IF([test "x$enable_deconvolve" != xno],
                      [enable_cognvolve=yes; ayes=true])],
-              [enable_deconvolution=notset])
+              [enable_deconvolve=notset])
 AC_ARG_ENABLE([fits],
               [AS_HELP_STRING([--enable-fits],
                     [Install Fits and other enabled programs.])],
@@ -1064,7 +1064,7 @@ AS_IF([test $ayes = true ],
        AS_IF([test $enable_convolve = notset],        [enable_convolve=no])
        AS_IF([test $enable_cosmiccal = notset],       [enable_cosmiccal=no])
        AS_IF([test $enable_crop = notset],            [enable_crop=no])
-       AS_IF([test $enable_deconvolution = notset],   [enable_deconvolution=no])
+       AS_IF([test $enable_deconvolve = notset],   [enable_deconvolve=no])
        AS_IF([test $enable_fits = notset],            [enable_fits=no])
        AS_IF([test $enable_match = notset],           [enable_match=no])
        AS_IF([test $enable_mkcatalog = notset],       [enable_mkcatalog=no])
@@ -1085,7 +1085,7 @@ AS_IF([test $ayes = true ],
        AS_IF([test $enable_convolve = notset],        [enable_convolve=yes])
        AS_IF([test $enable_cosmiccal = notset],       [enable_cosmiccal=yes])
        AS_IF([test $enable_crop = notset],            [enable_crop=yes])
-       AS_IF([test $enable_deconvolution = notset],   [enable_deconvolution=yes])
+       AS_IF([test $enable_deconvolve = notset],   [enable_deconvolve=yes])
        AS_IF([test $enable_fits = notset],            [enable_fits=yes])
        AS_IF([test $enable_match = notset],           [enable_match=yes])
        AS_IF([test $enable_mkcatalog = notset],       [enable_mkcatalog=yes])
@@ -1119,7 +1119,7 @@ AM_CONDITIONAL([COND_CONVERTT],     [test $enable_convertt = yes])
 AM_CONDITIONAL([COND_CONVOLVE],     [test $enable_convolve = yes])
 AM_CONDITIONAL([COND_COSMICCAL],    [test $enable_cosmiccal = yes])
 AM_CONDITIONAL([COND_CROP],         [test $enable_crop = yes])
-AM_CONDITIONAL([COND_DECONVOLUTION],[test $enable_deconvolution = yes])
+AM_CONDITIONAL([COND_DECONVOLVE],[test $enable_deconvolve = yes])
 AM_CONDITIONAL([COND_FITS],         [test $enable_fits = yes])
 AM_CONDITIONAL([COND_MATCH],        [test $enable_match = yes])
 AM_CONDITIONAL([COND_MKCATALOG],    [test $enable_mkcatalog = yes])
@@ -1176,7 +1176,7 @@ AC_CONFIG_FILES([Makefile
                  bin/statistics/Makefile
                  bin/noisechisel/Makefile
                  bootstrapped/lib/Makefile
-                 bin/deconvolution/Makefile
+                 bin/deconvolve/Makefile
                  bootstrapped/tests/Makefile
                  ])
 

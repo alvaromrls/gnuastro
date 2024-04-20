@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+Deconvolve - A minimal set of files and functions to define a program.
+Deconvolve is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -32,13 +32,12 @@ struct argp_option program_options[] = {
   { "khdu", UI_KEY_KHDU, "STR", 0, "HDU containing the kernel.",
     GAL_OPTIONS_GROUP_INPUT, &p->khdu, GAL_TYPE_STRING, GAL_OPTIONS_RANGE_ANY,
     GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
-  { "lambda", UI_KEY_LAMBDA, "FLT", 0, "Deconvolution: value for Tikhonov alg",
+  { "lambda", UI_KEY_LAMBDA, "FLT", 0, "Deconvolve: value for Tikhonov alg",
     GAL_OPTIONS_GROUP_INPUT, &p->lambda, GAL_TYPE_FLOAT64,
     GAL_OPTIONS_RANGE_GE_0_LE_1, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
-  { "algorithm", UI_KEY_ALGORITHM, "STR", 0,
-    "Deconvolution: Algorithm selection", GAL_OPTIONS_GROUP_INPUT,
-    &p->algorithmstr, GAL_TYPE_STRING, GAL_OPTIONS_RANGE_ANY,
-    GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
+  { "algorithm", UI_KEY_ALGORITHM, "STR", 0, "Deconvolve: Algorithm selection",
+    GAL_OPTIONS_GROUP_INPUT, &p->algorithmstr, GAL_TYPE_STRING,
+    GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
   { 0 }
 };
 

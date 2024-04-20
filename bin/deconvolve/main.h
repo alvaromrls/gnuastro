@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+Deconvolve - A minimal set of files and functions to define a program.
+Deconvolve is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -29,8 +29,8 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro-internal/options.h>
 
 /* Progarm names.  */
-#define PROGRAM_NAME "deconvolution"    /* Program full name.       */
-#define PROGRAM_EXEC "astdeconvolution" /* Program executable name. */
+#define PROGRAM_NAME "deconvolve"    /* Program full name.       */
+#define PROGRAM_EXEC "astdeconvolve" /* Program executable name. */
 #define PROGRAM_STRING PROGRAM_NAME " (" PACKAGE_NAME ") " PACKAGE_VERSION
 
 /* Macros */
@@ -43,7 +43,7 @@ typedef enum
 } DECONVOLUTION_ALGORITHM;
 
 /* Main program parameters structure */
-struct deconvolution_params
+struct deconvolve_params
 {
   /* From command-line */
   struct gal_options_common_params cp; /* Common parameters.   */

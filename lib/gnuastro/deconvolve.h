@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+Functions for deconvolution operations.
+This is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -20,9 +20,15 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 **********************************************************************/
-#ifndef DECONVOLUTION_H
-#define DECONVOLUTION_H
+#ifndef __GAL_DECONVOLVE_H__
+#define __GAL_DECONVOLVE_H__
 
-void deconvolution(struct deconvolution_params *p);
+#include <config.h>
+
+#include <gnuastro/data.h>
+
+void gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
+                              double lambda, size_t numthreads,
+                              gal_data_t **output);
 
 #endif

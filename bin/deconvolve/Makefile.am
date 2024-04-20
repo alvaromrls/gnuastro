@@ -28,24 +28,24 @@ AM_CPPFLAGS = -I\$(top_builddir)/bootstrapped/lib \
 
 
 ## Program definition (name, linking, sources and headers)
-bin_PROGRAMS = astdeconvolution
+bin_PROGRAMS = astdeconvolve
 
 ## We are linking with 'libgnu' first eventhough 'libgnu' is already linked
 ## to 'libgnuastro'. The reason is that some linkers (Mac OS for example),
 ## don't keep external variables (needed in Argp) after the first link. So
 ## the 'libgnu' (that is indirectly linked through 'libgnuastro') can't see
 ## those variables. We thus need to explicitly link with 'libgnu' first.
-astdeconvolution_LDADD = $(top_builddir)/bootstrapped/lib/libgnu.la \
+astdeconvolve_LDADD = $(top_builddir)/bootstrapped/lib/libgnu.la \
                     $(top_builddir)/lib/libgnuastro.la \
                     $(CONFIG_LDADD)
 
-astdeconvolution_SOURCES = main.c ui.c deconvolution.c
+astdeconvolve_SOURCES = main.c ui.c deconvolve.c
 
-EXTRA_DIST = main.h authors-cite.h args.h ui.h deconvolution.h
+EXTRA_DIST = main.h authors-cite.h args.h ui.h deconvolve.h
 
 
 
 ## The configuration file (distribute and install).
 ## NOTE: the man page is created in doc/Makefile.am
 pkgsysconfdir = $(sysconfdir)/$(PACKAGE)
-dist_pkgsysconf_DATA = astdeconvolution.conf
+dist_pkgsysconf_DATA = astdeconvolve.conf

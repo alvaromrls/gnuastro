@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+Deconvolve - A minimal set of files and functions to define a program.
+Deconvolve is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -66,7 +66,7 @@ const char doc[] = GAL_STRINGS_TOP_HELP_INFO PROGRAM_NAME
 /*********    Initialize & Parse command-line    **************/
 /**************************************************************/
 static void
-ui_initialize_options (struct deconvolution_params *p,
+ui_initialize_options (struct deconvolve_params *p,
                        struct argp_option *program_options,
                        struct argp_option *gal_commonopts_options)
 {
@@ -102,7 +102,7 @@ ui_initialize_options (struct deconvolution_params *p,
 error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  struct deconvolution_params *p = state->input;
+  struct deconvolve_params *p = state->input;
   /* Pass 'gal_options_common_params' into the child parser. */
   state->child_inputs[0] = &p->cp;
 
@@ -147,7 +147,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 /* Check ONLY the options. When arguments are involved, do the check
    in 'ui_check_options_and_arguments'. */
 static void
-ui_check_only_options (struct deconvolution_params *p)
+ui_check_only_options (struct deconvolve_params *p)
 {
   if (!strcmp ("tikhinov", p->algorithmstr))
     {
@@ -156,14 +156,14 @@ ui_check_only_options (struct deconvolution_params *p)
   else
     {
       error (EXIT_FAILURE, 0,
-             "Deconvolution algorithm not recognised (%s), "
+             "deconvolve algorithm not recognised (%s), "
              "please use a valid one ",
              p->algorithmstr);
     }
 }
 
 static void
-ui_check_options_and_arguments (struct deconvolution_params *p)
+ui_check_options_and_arguments (struct deconvolve_params *p)
 {
   int kernel_type;
 
@@ -210,7 +210,7 @@ ui_check_options_and_arguments (struct deconvolution_params *p)
 
 /* Read the input dataset. */
 static void
-ui_read_input (struct deconvolution_params *p)
+ui_read_input (struct deconvolve_params *p)
 {
   /* If the input is a FITS image or any recognized array file format, then
      read it as an array, otherwise, as a table. */
@@ -230,7 +230,7 @@ ui_read_input (struct deconvolution_params *p)
 
 /* Read the kernel.  */
 static void
-ui_read_kernel (struct deconvolution_params *p)
+ui_read_kernel (struct deconvolve_params *p)
 {
   /* Read the image into file. */
   if (p->kernelname && gal_array_name_recognized (p->kernelname))
@@ -248,11 +248,19 @@ ui_read_kernel (struct deconvolution_params *p)
 /**************************************************************/
 
 static void
-ui_preparations (struct deconvolution_params *p)
+ui_preparations (struct deconvolve_params *p)
 {
+  struct gal_options_common_params *cp = &p->cp;
+  char *outsuffix = "_deconvolved.fits";
+
   /* Read the input dataset. */
   ui_read_input (p);
   ui_read_kernel (p);
+
+  /* Set the output name if the user hasn't set it. */
+  if (cp->output == NULL)
+    cp->output = gal_checkset_automatic_output (cp, p->filename, outsuffix);
+  gal_checkset_writable_remove (cp->output, p->filename, 0, cp->dontdelete);
 }
 
 /**************************************************************/
@@ -260,7 +268,7 @@ ui_preparations (struct deconvolution_params *p)
 /**************************************************************/
 void
 ui_read_check_inputs_setup (int argc, char *argv[],
-                            struct deconvolution_params *p)
+                            struct deconvolve_params *p)
 {
   struct gal_options_common_params *cp = &p->cp;
 
@@ -309,7 +317,7 @@ ui_read_check_inputs_setup (int argc, char *argv[],
 /************      Free allocated, report         *************/
 /**************************************************************/
 void
-ui_free_report (struct deconvolution_params *p, struct timeval *t1)
+ui_free_report (struct deconvolve_params *p, struct timeval *t1)
 {
   /* Free the allocated arrays. */
   free (p->cp.hdu);

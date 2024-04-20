@@ -1,6 +1,6 @@
 /*********************************************************************
-Deconvolution - A minimal set of files and functions to define a program.
-Deconvolution is part of GNU Astronomy Utilities (Gnuastro) package.
+deconvolve - A minimal set of files and functions to define a program.
+deconvolve is part of GNU Astronomy Utilities (Gnuastro) package.
 
 Original author:
      Alvaro Morales <alvaro96m@hotmail.com>
@@ -20,19 +20,9 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 **********************************************************************/
-#ifndef AUTHORS_CITE_H
-#define AUTHORS_CITE_H
+#ifndef DECONVOLVE_H
+#define DECONVOLVE_H
 
-/* When any specific citation is necessary, please add its BibTeX (from ADS
-   hopefully) to this variable along with a title decribing what this
-   paper/book does for the progarm in a short line. In the following line
-   put a row of '-' with the same length and then put the BibTeX.
-
-   This macro will be used in 'gal_options_print_citation' function of
-   'lib/options.c' (from the top Gnuastro source code directory). */
-
-#define PROGRAM_BIBTEX ""
-
-#define PROGRAM_AUTHORS "Alvaro Morales"
+void deconvolve (struct deconvolve_params *p);
 
 #endif
