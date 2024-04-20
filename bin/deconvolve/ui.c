@@ -149,7 +149,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 static void
 ui_check_only_options (struct deconvolve_params *p)
 {
-  if (!strcmp ("tikhinov", p->algorithmstr))
+  if (!strcmp ("tikhonov", p->algorithmstr))
     {
       p->algorithm = DECONVOLUTION_ALGORITHM_TIKHONOV;
     }
