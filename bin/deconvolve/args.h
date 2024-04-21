@@ -34,7 +34,7 @@ struct argp_option program_options[] = {
     GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
   { "lambda", UI_KEY_LAMBDA, "FLT", 0, "Deconvolve: value for Tikhonov alg",
     GAL_OPTIONS_GROUP_INPUT, &p->lambda, GAL_TYPE_FLOAT64,
-    GAL_OPTIONS_RANGE_GE_0_LE_1, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
+    GAL_OPTIONS_RANGE_GT_0, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
   { "algorithm", UI_KEY_ALGORITHM, "STR", 0, "Deconvolve: Algorithm selection",
     GAL_OPTIONS_GROUP_INPUT, &p->algorithmstr, GAL_TYPE_STRING,
     GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
