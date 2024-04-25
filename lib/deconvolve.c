@@ -88,7 +88,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
   gal_complex_conjugate (psffreq, size, &psffconj);
-  gal_complex_multiply (psffreq, imagefreq, &numerator, size);
+  gal_complex_multiply (psffconj, imagefreq, &numerator, size);
 
   /* Caculate denominator |PSF(u,v)|^2 + λ */
   gal_complex_multiply (psffreq, psffconj, &psffreqsquare, size);
