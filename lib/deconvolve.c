@@ -77,7 +77,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Normalize and rearange the kernel. */
   gal_complex_normalize (psfpadding, size);
-  gal_fft_swap_quadrant (psfpadding, dsize);
+  gal_fft_shift_center (psfpadding, dsize);
 
   /* Convert to frequency domain. */
   gal_fft_two_dimension_transformation (

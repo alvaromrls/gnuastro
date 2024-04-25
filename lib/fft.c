@@ -300,62 +300,61 @@ fft_one_direction (void *p)
 }
 
 /**
- * @brief Swaps quadrants 1-3 and 2-4. Needed for kernel frequency domain
- * quadrant rearrangement (inplace)
- *
- *
- * Cuadrants:
- * 2 | 3
- * -----
- * 1 | 4
- *
+ * @brief Shifts along the X and Y axis to move the center to the pixel (0,0).
+ * *
  * @param kernel
- * @param size
+ * @param dim
  */
 void
-gal_fft_swap_quadrant (gsl_complex_packed_array kernel, size_t *dim)
+gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim)
 {
   gsl_complex_packed_array buffer;
-  size_t quadrantxsize = dim[0] / 2;
-  size_t quadrantysize = dim[1] / 2;
+  size_t xdist = dim[0] / 2;
+  size_t ydist = dim[1] / 2;
   size_t size = dim[0] * dim[1];
 
   // Swap diagonal cuadrants for FFT
-  buffer = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size / 4, 1, __func__,
-                                 "buffer");
+  buffer = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                                 "shiftbuffer");
+  memcpy (buffer, kernel, size * 2 * sizeof (double));
 
-  // 1st and 3rd quadrant swap
-  for (size_t x = 0; x < quadrantxsize; x++)
+  // X-Axis shift (left)
+  for (size_t x = 0; x < dim[0]; x++)
     {
-      for (size_t y = 0; y < quadrantysize; y++)
+      for (size_t y = 0; y < dim[1]; y++)
         {
-          // index equivalent in buffer
-          size_t indexb = (x * quadrantxsize + y) * 2;
-          // index equivalent in 1st quadrant
-          size_t index1 = (x * dim[0] + y) * 2;
-          // index equivalent in 3rd quadrant
-          size_t index3
-              = ((x + quadrantxsize) * dim[0] + y + quadrantysize) * 2;
-          buffer[indexb] = kernel[index1];
-          kernel[index1] = kernel[index3];
-          kernel[index3] = buffer[indexb];
+          size_t indexkernel = (x + y * dim[0]) * 2;
+          if (x <= xdist)
+            {
+              size_t indexbuffer = (x + xdist + y * dim[0]) * 2;
+              kernel[indexkernel] = buffer[indexbuffer];
+            }
+          else
+            {
+              size_t indexbuffer = (x - xdist - 1 + y * dim[0]) * 2;
+              kernel[indexkernel] = buffer[indexbuffer];
+            }
         }
     }
 
-  // 2nd and 4th quadrant swap
-  for (size_t x = 0; x < quadrantxsize; x++)
+  memcpy (buffer, kernel, size * 2 * sizeof (double));
+
+  // Y-Axis shift (down)
+  for (size_t x = 0; x < dim[0]; x++)
     {
-      for (size_t y = 0; y < quadrantysize; y++)
+      for (size_t y = 0; y < dim[1]; y++)
         {
-          // index equivalent in buffer
-          size_t indexb = (x * quadrantxsize + y) * 2;
-          // index equivalent in 2nd quadrant
-          size_t index2 = (x * dim[0] + y + quadrantysize) * 2;
-          // index equivalent in 4th quadrant
-          size_t index4 = ((x + quadrantxsize) * dim[0] + y) * 2;
-          buffer[indexb] = kernel[index2];
-          kernel[index2] = kernel[index4];
-          kernel[index4] = buffer[indexb];
+          size_t indexkernel = (x + y * dim[0]) * 2;
+          if (y <= ydist)
+            {
+              size_t indexbuffer = (x + (y + ydist) * dim[0]) * 2;
+              kernel[indexkernel] = buffer[indexbuffer];
+            }
+          else
+            {
+              size_t indexbuffer = (x + (y - ydist - 1) * dim[0]) * 2;
+              kernel[indexkernel] = buffer[indexbuffer];
+            }
         }
     }
 

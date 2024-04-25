@@ -32,6 +32,6 @@ void gal_fft_two_dimension_transformation (
     gsl_complex_packed_array *output, size_t numthreads, size_t minmapsize,
     gsl_fft_direction sign);
 
-void gal_fft_swap_quadrant (gsl_complex_packed_array kernel, size_t *dim);
+void gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim);
 
 #endif
