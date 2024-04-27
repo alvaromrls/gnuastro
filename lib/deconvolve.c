@@ -28,6 +28,10 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <string.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include <gnuastro/complex.h>
 #include <gnuastro/deconvolve.h>
 #include <gnuastro/fft.h>
@@ -68,7 +72,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Check image type. */
   if (image->type != GAL_TYPE_FLOAT32)
-    error (EXIT_FAILURE, 0, "%s: input data must be float 64", __func__);
+    error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
 
   /* Process the image and kernel to have same size and be complex numbers. */
   gal_complex_create_padding (image, PSF, &imagepadding, &psfpadding, dsize,
@@ -121,4 +125,141 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   free (denominator);
   free (deconvolutionfreq);
   free (deconvolution);
+}
+
+void
+richardson_lucy_init_object (gsl_complex_packed_array *output, size_t size)
+{
+  gsl_complex_packed_array out;
+
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "rlobject");
+
+  for (size_t index = 0; index < size; index++)
+    {
+      out[index * 2] = 1;
+    }
+  *output = out;
+}
+
+void
+richardson_lucy_calculate_next_object (gsl_complex_packed_array *object,
+                                       gsl_complex_packed_array psffreq,
+                                       gsl_complex_packed_array psffconjfreq,
+                                       gsl_complex_packed_array image,
+                                       size_t *dsize, size_t minmapsize,
+                                       size_t numthreads)
+{
+  gsl_complex_packed_array objectfreq;      // O(u,v)
+  gsl_complex_packed_array denominatorfreq; // (P·O)(u,v)
+  gsl_complex_packed_array denominator;     // (PxO)(x,y)
+  gsl_complex_packed_array division;        // I(x,y)/(PxO)(x,y)
+  gsl_complex_packed_array divisionfreq;    // FFT(I(x,y)/(PxO)(x,y))
+  gsl_complex_packed_array bracketfreq;     // (divisionfreq·P*)(u,v)
+  gsl_complex_packed_array bracket;         // FFT^-1(bracketfreq)
+  gsl_complex_packed_array next_object;     // On+1(x,y)
+  size_t size = dsize[0] * dsize[1];
+
+  /* Convert O to frequency domain. */
+  gal_fft_two_dimension_transformation (
+      *object, dsize, &objectfreq, numthreads, minmapsize, gsl_fft_forward);
+
+  gal_complex_multiply (objectfreq, psffreq, &denominatorfreq, size);
+
+  /*Calculate (PxO)(x,y)*/
+  gal_fft_two_dimension_transformation (denominatorfreq, dsize, &denominator,
+                                        numthreads, minmapsize,
+                                        gsl_fft_backward);
+
+  /*Calculate I(x,y)/(PxO)(x,y) and its FFT*/
+  gal_complex_divide (image, denominator, &division, size,
+                      1e-6); // check min value issues
+
+  gal_fft_two_dimension_transformation (
+      division, dsize, &divisionfreq, numthreads, minmapsize, gsl_fft_forward);
+
+  /* Calculate bracket value in Freq and Space*/
+  gal_complex_multiply (divisionfreq, psffconjfreq, &bracketfreq, size);
+
+  gal_fft_two_dimension_transformation (
+      bracketfreq, dsize, &bracket, numthreads, minmapsize, gsl_fft_backward);
+  // alpha value !!
+
+  /* Calculate next object */
+  gal_complex_multiply (bracket, *object, &next_object, size);
+
+  /* Free all internal variables */
+  free (*object);
+  free (objectfreq);
+  free (denominatorfreq);
+  free (denominator);
+  free (division);
+  free (divisionfreq);
+  free (bracketfreq);
+  free (bracket);
+
+  *object = next_object;
+}
+
+void
+gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
+                                size_t iterations, double alpha,
+                                size_t minmapsize, size_t numthreads,
+                                gal_data_t **output)
+{
+  gsl_complex_packed_array imagepadding; // original image after padding I(x,y)
+  gsl_complex_packed_array psfpadding;   // kernel after padding PSF(x,y)
+  gsl_complex_packed_array psffreq;      // PSF(u,v)
+  gsl_complex_packed_array psffconj;     // PSF*(u,v)
+  gsl_complex_packed_array object;       // O(x,y)
+
+  gal_data_t *data = NULL;
+  size_t dsize[2];
+  size_t size;
+  double *tmp;
+
+  /* Check image type. */
+  if (image->type != GAL_TYPE_FLOAT32)
+    error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
+
+  /* Process the image and kernel to have same size and be complex numbers. */
+  gal_complex_create_padding (image, PSF, &imagepadding, &psfpadding, dsize,
+                              &dsize[1]);
+  size = dsize[0] * dsize[1]; // Total number of elements.
+
+  /* Normalize and rearange the kernel. */
+  gal_complex_normalize (psfpadding, size);
+  gal_fft_shift_center (psfpadding, dsize);
+
+  /* Init the object */
+  srand (time (NULL));
+  richardson_lucy_init_object (&object, size);
+
+  /* Convert to frequency domain. */
+  gal_fft_two_dimension_transformation (
+      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
+
+  /* Calculate  PSF*(u,v) */
+  gal_complex_conjugate (psffreq, size, &psffconj);
+
+  for (size_t iteration = 0; iteration < iterations; iteration++)
+    {
+      richardson_lucy_calculate_next_object (&object, psffreq, psffconj,
+                                             imagepadding, dsize, minmapsize,
+                                             numthreads);
+    }
+
+  /* Convert to Real number and convert it to GAL TYPE.*/
+  gal_complex_to_real (object, dsize[0] * dsize[1], COMPLEX_TO_REAL_REAL,
+                       &tmp);
+  data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
+                         1, NULL, NULL, NULL); // data has to be 32
+  *output = data;
+
+  free (imagepadding);
+  free (psfpadding);
+  free (psffreq);
+  free (psffconj);
+  free (object);
 }

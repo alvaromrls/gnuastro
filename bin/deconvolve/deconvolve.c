@@ -43,13 +43,15 @@ deconvolve (struct deconvolve_params *p)
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
       printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
       gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
-                               p->cp.numthreads, p->cp.minmapsize, &data);
+                               p->cp.minmapsize, p->cp.numthreads, &data);
       break;
     case DECONVOLUTION_ALGORITHM_RL:
       printf ("Executing richardson-lucy algorithm with alpha = %f and %zu "
               "iterations\n",
               p->alpha, p->numberofitr);
-      error (EXIT_FAILURE, 0, "Not implemented RL algorithm");
+      gal_deconvolve_richardson_lucy (p->input, p->kernel, p->numberofitr,
+                                      p->alpha, p->cp.minmapsize,
+                                      p->cp.numthreads, &data);
       break;
     default:
       error (EXIT_FAILURE, 0, "Not implemented algorithm");
