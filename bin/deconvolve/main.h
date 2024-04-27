@@ -40,6 +40,9 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 typedef enum
 {
   DECONVOLUTION_ALGORITHM_TIKHONOV,
+  DECONVOLUTION_ALGORITHM_RL,
+  DECONVOLUTION_ALGORITH_AWMLE,
+  DECONVOLUTION_ALGORITH_NAIVE
 } DECONVOLUTION_ALGORITHM;
 
 /* Main program parameters structure */
@@ -47,11 +50,13 @@ struct deconvolve_params
 {
   /* From command-line */
   struct gal_options_common_params cp; /* Common parameters.   */
-  char *filename;   /* Input filename.                         */
-  char *kernelname; /* File name of kernel.                    */
-  char *khdu;       /* HDU of kernel.                          */
-  char *algorithmstr;
-  double lambda; /*Lambda value for Tikhonov algorithm      */
+  char *filename;     /* Input filename.                         */
+  char *kernelname;   /* File name of kernel.                    */
+  char *khdu;         /* HDU of kernel.                          */
+  char *algorithmstr; /*String with the algorithm name*/
+  double lambda;      /*Lambda value for Tikhonov algorithm      */
+  size_t numberofitr; /*Number of iterations for RL (default 75)*/
+  double alpha;       /* Rate for RL (default 1) */
 
   /* Internal */
   int isfits;   /* Input is a FITS file.                   */

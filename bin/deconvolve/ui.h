@@ -26,6 +26,12 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 /* For common options groups. */
 #include <gnuastro-internal/options.h>
 
+#define TIKHONOV_NAME "tikhonov"
+#define RICHADSON_LUCY_NAME "rl"
+
+#define RL_ALPHA_DEFAULT_VALUE 1.0
+#define RL_DEFAULT_ITERATIONS 75
+
 /* Available letters for short options:
 
    a b c d e f g i j l n p r s t v w x y z

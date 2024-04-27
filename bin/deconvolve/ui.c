@@ -149,23 +149,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
 static void
 ui_check_only_options (struct deconvolve_params *p)
 {
-  if (!strcmp ("tikhonov", p->algorithmstr))
-    {
-      p->algorithm = DECONVOLUTION_ALGORITHM_TIKHONOV;
-    }
-  else
-    {
-      error (EXIT_FAILURE, 0,
-             "deconvolve algorithm not recognised (%s), "
-             "please use a valid one ",
-             p->algorithmstr);
-    }
 }
 
 static void
 ui_check_options_and_arguments (struct deconvolve_params *p)
 {
-  int kernel_type;
 
   if (p->filename)
     {
@@ -203,8 +191,37 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
 
           /* If its an image, make sure column isn't given (in case the
              user confuses an image with a table). */
-          kernel_type = gal_fits_hdu_format (p->kernelname, p->khdu, "--khdu");
+          gal_fits_hdu_format (p->kernelname, p->khdu, "--khdu");
         }
+    }
+
+  if (!strcmp (TIKHONOV_NAME, p->algorithmstr))
+    {
+      p->algorithm = DECONVOLUTION_ALGORITHM_TIKHONOV;
+      if (p->lambda == 0)
+        {
+          error (EXIT_FAILURE, 0,
+                 "Tikhonov algorithm requires a lambda value");
+        }
+    }
+  else if (!strcmp (RICHADSON_LUCY_NAME, p->algorithmstr))
+    {
+      p->algorithm = DECONVOLUTION_ALGORITHM_RL;
+      if (p->alpha == 0)
+        {
+          p->alpha = RL_ALPHA_DEFAULT_VALUE;
+        }
+      if (p->numberofitr == 0)
+        {
+          p->numberofitr = RL_DEFAULT_ITERATIONS;
+        }
+    }
+  else
+    {
+      error (EXIT_FAILURE, 0,
+             "deconvolve algorithm not recognised (%s), "
+             "please use a valid one ",
+             p->algorithmstr);
     }
 }
 

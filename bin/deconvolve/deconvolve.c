@@ -22,6 +22,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 **********************************************************************/
 #include <config.h>
 
+#include <error.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,8 +45,14 @@ deconvolve (struct deconvolve_params *p)
       gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
                                p->cp.numthreads, p->cp.minmapsize, &data);
       break;
-
+    case DECONVOLUTION_ALGORITHM_RL:
+      printf ("Executing richardson-lucy algorithm with alpha = %f and %zu "
+              "iterations\n",
+              p->alpha, p->numberofitr);
+      error (EXIT_FAILURE, 0, "Not implemented RL algorithm");
+      break;
     default:
+      error (EXIT_FAILURE, 0, "Not implemented algorithm");
       break;
     }
 
