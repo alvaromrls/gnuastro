@@ -28,10 +28,6 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <string.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include <gnuastro/complex.h>
 #include <gnuastro/deconvolve.h>
 #include <gnuastro/fft.h>
@@ -128,7 +124,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 }
 
 void
-richardson_lucy_init_object (gsl_complex_packed_array *output, size_t size)
+richardson_lucy_init_solution (gsl_complex_packed_array *output, size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -144,62 +140,61 @@ richardson_lucy_init_object (gsl_complex_packed_array *output, size_t size)
 }
 
 void
-richardson_lucy_calculate_next_object (gsl_complex_packed_array *object,
-                                       gsl_complex_packed_array psffreq,
-                                       gsl_complex_packed_array psffconjfreq,
-                                       gsl_complex_packed_array image,
-                                       size_t *dsize, size_t minmapsize,
-                                       size_t numthreads)
+richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
+                                         gsl_complex_packed_array h,
+                                         gsl_complex_packed_array h_f,
+                                         gsl_complex_packed_array image,
+                                         size_t *dsize, size_t minmapsize,
+                                         size_t numthreads)
 {
-  gsl_complex_packed_array objectfreq;      // O(u,v)
-  gsl_complex_packed_array denominatorfreq; // (P·O)(u,v)
-  gsl_complex_packed_array denominator;     // (PxO)(x,y)
-  gsl_complex_packed_array division;        // I(x,y)/(PxO)(x,y)
-  gsl_complex_packed_array divisionfreq;    // FFT(I(x,y)/(PxO)(x,y))
-  gsl_complex_packed_array bracketfreq;     // (divisionfreq·P*)(u,v)
-  gsl_complex_packed_array bracket;         // FFT^-1(bracketfreq)
-  gsl_complex_packed_array next_object;     // On+1(x,y)
+  gsl_complex_packed_array solution_f;   // FFT(x)
+  gsl_complex_packed_array yest_f;       // h×FFT(x(k))
+  gsl_complex_packed_array yest;         // y_est := FFT−1(h×FFT(x))
+  gsl_complex_packed_array division;     // y/y_est
+  gsl_complex_packed_array divisionfreq; // FFT(y/y_est)
+  gsl_complex_packed_array bracket_f;    // h*xFFT(y/y_est)
+  gsl_complex_packed_array bracket;      // FFT^-1(bracket_f)
+  gsl_complex_packed_array next_solution;
   size_t size = dsize[0] * dsize[1];
 
   /* Convert O to frequency domain. */
   gal_fft_two_dimension_transformation (
-      *object, dsize, &objectfreq, numthreads, minmapsize, gsl_fft_forward);
+      *solution, dsize, &solution_f, numthreads, minmapsize, gsl_fft_forward);
 
-  gal_complex_multiply (objectfreq, psffreq, &denominatorfreq, size);
+  gal_complex_multiply (solution_f, h, &yest_f, size);
 
   /*Calculate (PxO)(x,y)*/
-  gal_fft_two_dimension_transformation (denominatorfreq, dsize, &denominator,
-                                        numthreads, minmapsize,
-                                        gsl_fft_backward);
+  gal_fft_two_dimension_transformation (yest_f, dsize, &yest, numthreads,
+                                        minmapsize, gsl_fft_backward);
 
   /*Calculate I(x,y)/(PxO)(x,y) and its FFT*/
-  gal_complex_divide (image, denominator, &division, size,
+  gal_complex_divide (image, yest, &division, size,
                       1e-6); // check min value issues
 
   gal_fft_two_dimension_transformation (
       division, dsize, &divisionfreq, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate bracket value in Freq and Space*/
-  gal_complex_multiply (divisionfreq, psffconjfreq, &bracketfreq, size);
+  gal_complex_multiply (divisionfreq, h_f, &bracket_f, size);
 
-  gal_fft_two_dimension_transformation (
-      bracketfreq, dsize, &bracket, numthreads, minmapsize, gsl_fft_backward);
+  gal_fft_two_dimension_transformation (bracket_f, dsize, &bracket, numthreads,
+                                        minmapsize, gsl_fft_backward);
   // alpha value !!
 
   /* Calculate next object */
-  gal_complex_multiply (bracket, *object, &next_object, size);
+  gal_complex_multiply (bracket, *solution, &next_solution, size);
 
   /* Free all internal variables */
-  free (*object);
-  free (objectfreq);
-  free (denominatorfreq);
-  free (denominator);
+  free (*solution);
+  free (solution_f);
+  free (yest_f);
+  free (yest);
   free (division);
   free (divisionfreq);
-  free (bracketfreq);
+  free (bracket_f);
   free (bracket);
 
-  *object = next_object;
+  *solution = next_solution;
 }
 
 void
@@ -232,9 +227,8 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   gal_complex_normalize (psfpadding, size);
   gal_fft_shift_center (psfpadding, dsize);
 
-  /* Init the object */
-  srand (time (NULL));
-  richardson_lucy_init_object (&object, size);
+  /* Init the solution */
+  richardson_lucy_init_solution (&object, size);
 
   /* Convert to frequency domain. */
   gal_fft_two_dimension_transformation (
@@ -245,9 +239,9 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
 
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
-      richardson_lucy_calculate_next_object (&object, psffreq, psffconj,
-                                             imagepadding, dsize, minmapsize,
-                                             numthreads);
+      richardson_lucy_calculate_next_solution (&object, psffreq, psffconj,
+                                               imagepadding, dsize, minmapsize,
+                                               numthreads);
     }
 
   /* Convert to Real number and convert it to GAL TYPE.*/
