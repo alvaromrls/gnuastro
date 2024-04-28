@@ -77,4 +77,7 @@ void gal_complex_normalize (gsl_complex_packed_array inout, size_t size);
 double gal_complex_cumulative_sum (gsl_complex_packed_array input,
                                    size_t size);
 
+void gal_complex_power (gsl_complex_packed_array input, double exponent,
+                        gsl_complex_packed_array *output, size_t size);
+
 #endif

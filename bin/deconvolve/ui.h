@@ -45,7 +45,9 @@ enum option_keys_enum
   UI_KEY_KERNEL = 'k',
   UI_KEY_KHDU = 'u',
   UI_KEY_LAMBDA = 'L',
-  UI_KEY_ALGORITHM = 'A'
+  UI_KEY_ALGORITHM = 'A',
+  UI_KEY_ITERATIONS = 'i',
+  UI_KEY_APLHA = 'a'
   /* Only with long version (start with a value 1000, the rest will be set
      automatically). */
 };

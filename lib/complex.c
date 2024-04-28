@@ -342,3 +342,23 @@ gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
     }
   return cumulativesume;
 }
+
+void
+gal_complex_power (gsl_complex_packed_array input, double exponent,
+                   gsl_complex_packed_array *output, size_t size)
+{
+  gsl_complex_packed_array out;
+
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__, "power");
+
+  /* Iterate over the arrays: multiply the elements */
+  for (size_t index = 0; index < size; index++)
+    {
+      gsl_complex z = input[index * 2] + I * input[index * 2 + 1];
+      gsl_complex result = gsl_complex_pow (z, exponent);
+      out[index * 2] = GSL_REAL (result);
+      out[index * 2 + 1] = GSL_IMAG (result);
+    }
+  *output = out;
+}

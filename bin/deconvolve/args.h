@@ -38,6 +38,13 @@ struct argp_option program_options[] = {
   { "algorithm", UI_KEY_ALGORITHM, "STR", 0, "Deconvolve: Algorithm selection",
     GAL_OPTIONS_GROUP_INPUT, &p->algorithmstr, GAL_TYPE_STRING,
     GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_MANDATORY, GAL_OPTIONS_NOT_SET },
+  { "iterations", UI_KEY_ITERATIONS, "INT", 0,
+    "Deconvolve: Number of iterations", GAL_OPTIONS_GROUP_INPUT,
+    &p->numberofitr, GAL_TYPE_UINT32, GAL_OPTIONS_RANGE_ANY,
+    GAL_OPTIONS_NOT_MANDATORY, GAL_OPTIONS_NOT_SET },
+  { "alpha", UI_KEY_APLHA, "DOUBLE", 0, "Deconvolve: Alha (rate)",
+    GAL_OPTIONS_GROUP_INPUT, &p->alpha, GAL_TYPE_FLOAT64,
+    GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_NOT_MANDATORY, GAL_OPTIONS_NOT_SET },
   { 0 }
 };
 
