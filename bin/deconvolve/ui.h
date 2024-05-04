@@ -27,6 +27,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro-internal/options.h>
 
 #define TIKHONOV_NAME "tikhonov"
+#define NAIVE_NAME "naive"
 #define RICHADSON_LUCY_NAME "rl"
 
 #define RL_ALPHA_DEFAULT_VALUE 1.0

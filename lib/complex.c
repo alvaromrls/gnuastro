@@ -343,6 +343,14 @@ gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
   return cumulativesume;
 }
 
+/**
+ * @brief Function to raise the complex array power x
+ *
+ * @param input Input array to be raised
+ * @param exponent The exponent (real number)
+ * @param output
+ * @param size
+ */
 void
 gal_complex_power (gsl_complex_packed_array input, double exponent,
                    gsl_complex_packed_array *output, size_t size)

@@ -123,6 +123,76 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   free (deconvolution);
 }
 
+/**
+ * @brief Implements a deconvolution using the naive method:
+ * O(u,v) = I(u,v)/PSF(u,v)
+ *
+ * @param image
+ * @param PSF
+ * @param numthreads
+ * @param minmapsize
+ * @param output
+ */
+void
+gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
+                      size_t numthreads, size_t minmapsize,
+                      gal_data_t **output)
+{
+  gsl_complex_packed_array imagepadding;      // original image after padding
+  gsl_complex_packed_array psfpadding;        // kernel after padding
+  gsl_complex_packed_array psffreq;           // PSF(u,v)
+  gsl_complex_packed_array imagefreq;         // I(u,v)
+  gsl_complex_packed_array deconvolutionfreq; // I(u,v) / PSF(u,v)
+  gsl_complex_packed_array deconvolution;     // Deconvolution in time domine
+
+  gal_data_t *data = NULL;
+  size_t dsize[2];
+  size_t size;
+  double *tmp;
+
+  /* Check image type. */
+  if (image->type != GAL_TYPE_FLOAT32)
+    error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
+
+  /* Process the image and kernel to have same size and be complex numbers. */
+  gal_complex_create_padding (image, PSF, &imagepadding, &psfpadding, dsize,
+                              &dsize[1]);
+  size = dsize[0] * dsize[1]; // Total number of elements.
+
+  /* Normalize and rearange the kernel. */
+  gal_complex_normalize (psfpadding, size);
+  gal_fft_shift_center (psfpadding, dsize);
+
+  /* Convert to frequency domain. */
+  gal_fft_two_dimension_transformation (
+      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
+  gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq,
+                                        numthreads, minmapsize,
+                                        gsl_fft_forward);
+
+  /* Calculate the deconvolve image (in frequency domain).*/
+  gal_complex_divide (imagefreq, psffreq, &deconvolutionfreq, size, 1e-6);
+
+  /* Go back to time domain. */
+  gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
+                                        &deconvolution, numthreads, minmapsize,
+                                        gsl_fft_backward);
+
+  /* Convert to Real number and convert it to GAL TYPE.*/
+  gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
+                       COMPLEX_TO_REAL_REAL, &tmp);
+  data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
+                         1, NULL, NULL, NULL); // data has to be 32
+  *output = data;
+
+  /* Free resources. */
+  free (imagepadding);
+  free (psfpadding);
+  free (psffreq);
+  free (deconvolutionfreq);
+  free (deconvolution);
+}
+
 void
 richardson_lucy_init_solution (gsl_complex_packed_array *output, size_t size)
 {

@@ -40,10 +40,15 @@ deconvolve (struct deconvolve_params *p)
 
   switch (p->algorithm)
     {
+    case DECONVOLUTION_ALGORITHM_NAIVE:
+      printf ("Executing naive algorithm \n");
+      gal_deconvolve_naive (p->input, p->kernel, p->cp.numthreads,
+                            p->cp.minmapsize, &data);
+      break;
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
       printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
       gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
-                               p->cp.minmapsize, p->cp.numthreads, &data);
+                               p->cp.numthreads, p->cp.minmapsize, &data);
       break;
     case DECONVOLUTION_ALGORITHM_RL:
       printf ("Executing richardson-lucy algorithm with alpha = %f and %zu "

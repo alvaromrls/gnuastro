@@ -204,6 +204,11 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
                  "Tikhonov algorithm requires a lambda value");
         }
     }
+
+  else if (!strcmp (NAIVE_NAME, p->algorithmstr))
+    {
+      p->algorithm = DECONVOLUTION_ALGORITHM_NAIVE;
+    }
   else if (!strcmp (RICHADSON_LUCY_NAME, p->algorithmstr))
     {
       p->algorithm = DECONVOLUTION_ALGORITHM_RL;
@@ -220,8 +225,8 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
     {
       error (EXIT_FAILURE, 0,
              "deconvolve algorithm not recognised (%s), "
-             "please use a valid one ",
-             p->algorithmstr);
+             "please use a valid one: \n -%s \n -%s \n -%s\n",
+             p->algorithmstr, TIKHONOV_NAME, NAIVE_NAME, RICHADSON_LUCY_NAME);
     }
 }
 
