@@ -33,6 +33,13 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
 
+void deconvolve_richardson_lucy_calculate_next_solution (
+    gsl_complex_packed_array *solution, gsl_complex_packed_array h,
+    gsl_complex_packed_array h_f, gsl_complex_packed_array image, double alpha,
+    size_t *dsize, size_t minmapsize, size_t numthreads);
+void
+deconvolve_richardson_lucy_init_solution (gsl_complex_packed_array *output,
+                                          size_t size);
 /**
  * @brief Implement a deconvolution using the Wiener / Tikhonov method
  * described at https://ui.adsabs.harvard.edu/abs/2002PASP..114.1051S/abstract
@@ -190,7 +197,8 @@ gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
 }
 
 void
-richardson_lucy_init_solution (gsl_complex_packed_array *output, size_t size)
+deconvolve_richardson_lucy_init_solution (gsl_complex_packed_array *output,
+                                          size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -206,12 +214,10 @@ richardson_lucy_init_solution (gsl_complex_packed_array *output, size_t size)
 }
 
 void
-richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
-                                         gsl_complex_packed_array h,
-                                         gsl_complex_packed_array h_f,
-                                         gsl_complex_packed_array image,
-                                         double alpha, size_t *dsize,
-                                         size_t minmapsize, size_t numthreads)
+deconvolve_richardson_lucy_calculate_next_solution (
+    gsl_complex_packed_array *solution, gsl_complex_packed_array h,
+    gsl_complex_packed_array h_f, gsl_complex_packed_array image, double alpha,
+    size_t *dsize, size_t minmapsize, size_t numthreads)
 {
   gsl_complex_packed_array solution_f;    // FFT(x)
   gsl_complex_packed_array yest_f;        // h×FFT(x(k))
@@ -296,7 +302,7 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   gal_fft_shift_center (psfpadding, dsize);
 
   /* Init the solution */
-  richardson_lucy_init_solution (&object, size);
+  deconvolve_richardson_lucy_init_solution (&object, size);
 
   /* Convert to frequency domain. */
   psffreq = gal_fft_two_dimension_transformation (
@@ -307,9 +313,9 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
 
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
-      richardson_lucy_calculate_next_solution (&object, psffreq, psffconj,
-                                               imagepadding, alpha, dsize,
-                                               minmapsize, numthreads);
+      deconvolve_richardson_lucy_calculate_next_solution (
+          &object, psffreq, psffconj, imagepadding, alpha, dsize, minmapsize,
+          numthreads);
     }
 
   /* Convert to Real number and convert it to GAL TYPE.*/
