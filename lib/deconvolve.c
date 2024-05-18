@@ -37,9 +37,8 @@ void deconvolve_richardson_lucy_calculate_next_solution (
     gsl_complex_packed_array *solution, gsl_complex_packed_array h,
     gsl_complex_packed_array h_f, gsl_complex_packed_array image, double alpha,
     size_t *dsize, size_t minmapsize, size_t numthreads);
-void
-deconvolve_richardson_lucy_init_solution (gsl_complex_packed_array *output,
-                                          size_t size);
+gsl_complex_packed_array
+deconvolve_richardson_lucy_init_solution (size_t size);
 /**
  * @brief Implement a deconvolution using the Wiener / Tikhonov method
  * described at https://ui.adsabs.harvard.edu/abs/2002PASP..114.1051S/abstract
@@ -196,9 +195,8 @@ gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
   free (deconvolution);
 }
 
-void
-deconvolve_richardson_lucy_init_solution (gsl_complex_packed_array *output,
-                                          size_t size)
+gsl_complex_packed_array
+deconvolve_richardson_lucy_init_solution (size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -302,7 +300,7 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   gal_fft_shift_center (psfpadding, dsize);
 
   /* Init the solution */
-  deconvolve_richardson_lucy_init_solution (&object, size);
+  object = deconvolve_richardson_lucy_init_solution (size);
 
   /* Convert to frequency domain. */
   psffreq = gal_fft_two_dimension_transformation (
