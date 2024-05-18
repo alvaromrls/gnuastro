@@ -34,13 +34,13 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  * @param complexarray the array to be converted
  * @param size total number of element in the array
  * @param action how to convert the complex numbers
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
                      complex_to_real action)
 {
-  double *out; // Easier var to work with than output
+  gsl_complex_packed_array out; // Easier var to work with than output
 
   /* Allocate the space for the real array. */
   out = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "out");
@@ -88,9 +88,9 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
  * @param first first element in the multiplication
  * @param second second element in the multiplication
  * @param size total number of element in the array.
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_multiply (gsl_complex_packed_array first,
                       gsl_complex_packed_array second, size_t size)
 {
@@ -136,9 +136,9 @@ gal_complex_scale (gsl_complex_packed_array inout, double value, size_t size)
  * @param second divisor.
  * @param size total number of elements in the array.
  * @param minValue if divisor is less than this value, the result will be 0.
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_divide (gsl_complex_packed_array first,
                     gsl_complex_packed_array second, size_t size,
                     double minvalue)
@@ -176,9 +176,9 @@ gal_complex_divide (gsl_complex_packed_array first,
  *
  * @param input the array to conjugate.
  * @param size total number of element in the array.
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
 {
   gsl_complex_packed_array out;
@@ -201,9 +201,9 @@ gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
  * @param input the input array.
  * @param size total number of element in the array.
  * @param scalar a complex number to add to each element.
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
                         gsl_complex scalar)
 {
@@ -346,9 +346,9 @@ gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
  * @param input Input array to be raised.
  * @param exponent The exponent (real number).
  * @param size total number of element in the array.
- * @return double* a pointer to the new data
+ * @return gsl_complex_packed_array  a pointer to the new data
  */
-double *
+gsl_complex_packed_array
 gal_complex_power (gsl_complex_packed_array input, double exponent,
                    size_t size)
 {
