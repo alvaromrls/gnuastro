@@ -85,15 +85,14 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
 /**
  * @brief Perform an element-wise multiplication of two complex arrays.
  *
- * @param first
- * @param second
- * @param output a pointer to pointer for the new data.
+ * @param first first element in the multiplication
+ * @param second second element in the multiplication
  * @param size total number of element in the array.
+ * @return double* a pointer to the new data
  */
-void
+double *
 gal_complex_multiply (gsl_complex_packed_array first,
-                      gsl_complex_packed_array second,
-                      gsl_complex_packed_array *output, size_t size)
+                      gsl_complex_packed_array second, size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -110,7 +109,7 @@ gal_complex_multiply (gsl_complex_packed_array first,
       out[index * 2] = GSL_REAL (result);
       out[index * 2 + 1] = GSL_IMAG (result);
     }
-  *output = out;
+  return out;
 }
 
 /**

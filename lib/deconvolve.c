@@ -88,10 +88,10 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
   gal_complex_conjugate (psffreq, size, &psffconj);
-  gal_complex_multiply (psffconj, imagefreq, &numerator, size);
+  numerator = gal_complex_multiply (psffconj, imagefreq, size);
 
   /* Caculate denominator |PSF(u,v)|^2 + λ */
-  gal_complex_multiply (psffreq, psffconj, &psffreqsquare, size);
+  psffreqsquare = gal_complex_multiply (psffreq, psffconj, size);
   gal_complex_add_scalar (psffreqsquare, size, lambda + I * 0, &denominator);
 
   /* Calculate the deconvolve image (in frequency domain).*/
@@ -232,7 +232,7 @@ richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
   gal_fft_two_dimension_transformation (
       *solution, dsize, &solution_f, numthreads, minmapsize, gsl_fft_forward);
 
-  gal_complex_multiply (solution_f, h, &yest_f, size);
+  yest_f = gal_complex_multiply (solution_f, h, size);
 
   /*Calculate y_est*/
   gal_fft_two_dimension_transformation (yest_f, dsize, &yest, numthreads,
@@ -246,14 +246,14 @@ richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
       division, dsize, &divisionfreq, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate bracket value in Freq and Space*/
-  gal_complex_multiply (divisionfreq, h_f, &bracket_f, size);
+  bracket_f = gal_complex_multiply (divisionfreq, h_f, size);
 
   gal_fft_two_dimension_transformation (bracket_f, dsize, &bracket, numthreads,
                                         minmapsize, gsl_fft_backward);
   // alpha value !!
   gal_complex_power (bracket, alpha, &bracket_alpha, size);
   /* Calculate next object */
-  gal_complex_multiply (bracket_alpha, *solution, &next_solution, size);
+  next_solution = gal_complex_multiply (bracket_alpha, *solution, size);
 
   /* Free all internal variables */
   free (*solution);
