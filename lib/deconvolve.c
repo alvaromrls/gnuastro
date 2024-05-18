@@ -104,8 +104,8 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                                         gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
-  gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
-                       COMPLEX_TO_REAL_REAL, &tmp);
+  tmp = gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
+                             COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
   *output = data;
@@ -179,8 +179,8 @@ gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
                                         gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
-  gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
-                       COMPLEX_TO_REAL_REAL, &tmp);
+  tmp = gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
+                             COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
   *output = data;
@@ -317,8 +317,8 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
     }
 
   /* Convert to Real number and convert it to GAL TYPE.*/
-  gal_complex_to_real (object, dsize[0] * dsize[1], COMPLEX_TO_REAL_REAL,
-                       &tmp);
+  tmp = gal_complex_to_real (object, dsize[0] * dsize[1],
+                             COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
   *output = data;

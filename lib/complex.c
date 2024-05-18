@@ -34,11 +34,11 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  * @param complexarray the array to be converted
  * @param size total number of element in the array
  * @param action how to convert the complex numbers
- * @param output a pointer to pointer for the new data
+ * @return double* a pointer to the new data
  */
-void
+double *
 gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
-                     complex_to_real action, double **output)
+                     complex_to_real action)
 {
   double *out; // Easier var to work with than output
 
@@ -79,7 +79,7 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
              "correct it. The 'action' code %d is not recognized",
              __func__, PACKAGE_BUGREPORT, action);
     }
-  *output = out;
+  return out;
 }
 
 /**

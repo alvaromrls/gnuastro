@@ -44,8 +44,8 @@ typedef enum
   COMPLEX_TO_REAL_REAL,    // Take only the real part
 } complex_to_real;
 
-void gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
-                          complex_to_real action, double **output);
+double *gal_complex_to_real (gsl_complex_packed_array complexarray,
+                             size_t size, complex_to_real action);
 
 void gal_complex_multiply (gsl_complex_packed_array first,
                            gsl_complex_packed_array second,
