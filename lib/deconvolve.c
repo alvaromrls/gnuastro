@@ -95,8 +95,8 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   gal_complex_add_scalar (psffreqsquare, size, lambda + I * 0, &denominator);
 
   /* Calculate the deconvolve image (in frequency domain).*/
-  gal_complex_divide (numerator, denominator, &deconvolutionfreq, size,
-                      lambda);
+  deconvolutionfreq
+      = gal_complex_divide (numerator, denominator, size, lambda);
 
   /* Go back to time domain. */
   gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
@@ -171,7 +171,7 @@ gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
                                         gsl_fft_forward);
 
   /* Calculate the deconvolve image (in frequency domain).*/
-  gal_complex_divide (imagefreq, psffreq, &deconvolutionfreq, size, 1e-6);
+  deconvolutionfreq = gal_complex_divide (imagefreq, psffreq, size, 1e-6);
 
   /* Go back to time domain. */
   gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
@@ -239,8 +239,8 @@ richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
                                         minmapsize, gsl_fft_backward);
 
   /*Calculate y/y_est and its FFT*/
-  gal_complex_divide (image, yest, &division, size,
-                      1e-6); // check min value issues
+  division = gal_complex_divide (image, yest, size,
+                                 1e-6); // check min value issues
 
   gal_fft_two_dimension_transformation (
       division, dsize, &divisionfreq, numthreads, minmapsize, gsl_fft_forward);

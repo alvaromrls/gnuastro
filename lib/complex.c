@@ -134,14 +134,13 @@ gal_complex_scale (gsl_complex_packed_array inout, double value, size_t size)
  *
  * @param first dividend.
  * @param second divisor.
- * @param output a pointer to pointer for the new data.
  * @param size total number of elements in the array.
  * @param minValue if divisor is less than this value, the result will be 0.
+ * @return double* a pointer to the new data
  */
-void
+double *
 gal_complex_divide (gsl_complex_packed_array first,
-                    gsl_complex_packed_array second,
-                    gsl_complex_packed_array *output, size_t size,
+                    gsl_complex_packed_array second, size_t size,
                     double minvalue)
 {
   gsl_complex_packed_array out;
@@ -168,7 +167,7 @@ gal_complex_divide (gsl_complex_packed_array first,
           out[index * 2 + 1] = 0;
         }
     }
-  *output = out;
+  return out;
 }
 
 /**
