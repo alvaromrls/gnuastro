@@ -343,14 +343,14 @@ gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
 /**
  * @brief Function to raise the complex array power x
  *
- * @param input Input array to be raised
- * @param exponent The exponent (real number)
- * @param output
- * @param size
+ * @param input Input array to be raised.
+ * @param exponent The exponent (real number).
+ * @param size total number of element in the array.
+ * @return double* a pointer to the new data
  */
-void
+double *
 gal_complex_power (gsl_complex_packed_array input, double exponent,
-                   gsl_complex_packed_array *output, size_t size)
+                   size_t size)
 {
   gsl_complex_packed_array out;
 
@@ -365,5 +365,5 @@ gal_complex_power (gsl_complex_packed_array input, double exponent,
       out[index * 2] = GSL_REAL (result);
       out[index * 2 + 1] = GSL_IMAG (result);
     }
-  *output = out;
+  return out;
 }

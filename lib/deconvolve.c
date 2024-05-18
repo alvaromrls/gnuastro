@@ -250,8 +250,8 @@ richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
 
   gal_fft_two_dimension_transformation (bracket_f, dsize, &bracket, numthreads,
                                         minmapsize, gsl_fft_backward);
-  // alpha value !!
-  gal_complex_power (bracket, alpha, &bracket_alpha, size);
+  // alpha value
+  bracket_alpha = gal_complex_power (bracket, alpha, size);
   /* Calculate next object */
   next_solution = gal_complex_multiply (bracket_alpha, *solution, size);
 
