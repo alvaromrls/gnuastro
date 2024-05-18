@@ -60,9 +60,8 @@ double *gal_complex_divide (gsl_complex_packed_array first,
 double *gal_complex_conjugate (gsl_const_complex_packed_array input,
                                size_t size);
 
-void gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
-                             gsl_complex scalar,
-                             gsl_complex_packed_array *output);
+double *gal_complex_add_scalar (gsl_const_complex_packed_array input,
+                                size_t size, gsl_complex scalar);
 
 void gal_complex_create_padding (const gal_data_t *image,
                                  const gal_data_t *kernel,

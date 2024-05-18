@@ -198,14 +198,14 @@ gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
 /**
  * @brief Add a scalar number to each of the elements of a given complex array.
  *
- * @param input
- * @param size
- * @param scalar
- * @param output
+ * @param input the input array.
+ * @param size total number of element in the array.
+ * @param scalar a complex number to add to each element.
+ * @return double* a pointer to the new data
  */
-void
+double *
 gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
-                        gsl_complex scalar, gsl_complex_packed_array *output)
+                        gsl_complex scalar)
 {
   gsl_complex_packed_array out;
   /* Allocate the space for the output array. */
@@ -218,7 +218,7 @@ gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
       out[index * 2] = input[index * 2] + GSL_REAL (scalar);
       out[index * 2 + 1] = input[index * 2 + 1] + GSL_IMAG (scalar);
     }
-  *output = out;
+  return out;
 }
 
 /**

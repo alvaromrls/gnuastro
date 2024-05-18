@@ -92,7 +92,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Caculate denominator |PSF(u,v)|^2 + λ */
   psffreqsquare = gal_complex_multiply (psffreq, psffconj, size);
-  gal_complex_add_scalar (psffreqsquare, size, lambda + I * 0, &denominator);
+  denominator = gal_complex_add_scalar (psffreqsquare, size, lambda + I * 0);
 
   /* Calculate the deconvolve image (in frequency domain).*/
   deconvolutionfreq
