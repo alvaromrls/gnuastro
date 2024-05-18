@@ -176,11 +176,10 @@ gal_complex_divide (gsl_complex_packed_array first,
  *
  * @param input the array to conjugate.
  * @param size total number of element in the array.
- * @param minValue if divisor is less than this value, the result will be 0.
+ * @return double* a pointer to the new data
  */
-void
-gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size,
-                       gsl_complex_packed_array *output)
+double *
+gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
 {
   gsl_complex_packed_array out;
   /* Allocate the space for the output array. */
@@ -193,7 +192,7 @@ gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size,
       out[index * 2] = input[index * 2];
       out[index * 2 + 1] = -input[index * 2 + 1];
     }
-  *output = out;
+  return out;
 }
 
 /**

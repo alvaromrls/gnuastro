@@ -87,7 +87,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                                         gsl_fft_forward);
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
-  gal_complex_conjugate (psffreq, size, &psffconj);
+  psffconj = gal_complex_conjugate (psffreq, size);
   numerator = gal_complex_multiply (psffconj, imagefreq, size);
 
   /* Caculate denominator |PSF(u,v)|^2 + λ */
@@ -307,7 +307,7 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
       psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate  PSF*(u,v) */
-  gal_complex_conjugate (psffreq, size, &psffconj);
+  psffconj = gal_complex_conjugate (psffreq, size);
 
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {

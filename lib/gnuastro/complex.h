@@ -57,8 +57,8 @@ double *gal_complex_divide (gsl_complex_packed_array first,
                             gsl_complex_packed_array second, size_t size,
                             double minvalue);
 
-void gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size,
-                            gsl_complex_packed_array *output);
+double *gal_complex_conjugate (gsl_const_complex_packed_array input,
+                               size_t size);
 
 void gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
                              gsl_complex scalar,
