@@ -27,10 +27,9 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/complex.h>
 #include <gsl/gsl_fft_complex.h>
 
-void gal_fft_two_dimension_transformation (
-    gsl_const_complex_packed_array input, size_t *dim,
-    gsl_complex_packed_array *output, size_t numthreads, size_t minmapsize,
-    gsl_fft_direction sign);
+gsl_complex_packed_array gal_fft_two_dimension_transformation (
+    gsl_const_complex_packed_array input, size_t *dim, size_t numthreads,
+    size_t minmapsize, gsl_fft_direction sign);
 
 void gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim);
 

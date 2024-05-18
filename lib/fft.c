@@ -126,17 +126,17 @@ fft_free (fft_params *params, size_t numthreads)
 /**
  * @brief Perform a 2D FFT
  *
- * @param input the array to apply the transformation
- * @param dim 2D array with X,Y dimensions
- * @param output
- * @param numthreads
- * @param sign Forward of backward
+ * @param input the array to apply the transformation.
+ * @param dim 2D array with X,Y dimensions.
+ * @param numthreads number of threads to be used in fft.
+ * @param sign Forward of backward.
+ * @return gsl_complex_packed_array the image after fft.
  */
-void
+
+gsl_complex_packed_array
 gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
-                                      size_t *dim,
-                                      gsl_complex_packed_array *output,
-                                      size_t numthreads, size_t minmapsize,
+                                      size_t *dim, size_t numthreads,
+                                      size_t minmapsize,
                                       gsl_fft_direction sign)
 {
   double *out; // Easier var to access than output
@@ -247,7 +247,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
 
   /* Free FFT resources. */
   fft_free (params, numthreads);
-  *output = out;
+  return out;
 }
 
 /**

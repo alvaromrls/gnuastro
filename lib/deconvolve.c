@@ -80,11 +80,10 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   gal_fft_shift_center (psfpadding, dsize);
 
   /* Convert to frequency domain. */
-  gal_fft_two_dimension_transformation (
-      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
-  gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq,
-                                        numthreads, minmapsize,
-                                        gsl_fft_forward);
+  psffreq = gal_fft_two_dimension_transformation (
+      psfpadding, dsize, numthreads, minmapsize, gsl_fft_forward);
+  imagefreq = gal_fft_two_dimension_transformation (
+      imagepadding, dsize, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate numerator PSF*(u,v)I(u,v) */
   psffconj = gal_complex_conjugate (psffreq, size);
@@ -99,9 +98,8 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
       = gal_complex_divide (numerator, denominator, size, lambda);
 
   /* Go back to time domain. */
-  gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
-                                        &deconvolution, numthreads, minmapsize,
-                                        gsl_fft_backward);
+  deconvolution = gal_fft_two_dimension_transformation (
+      deconvolutionfreq, dsize, numthreads, minmapsize, gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
   tmp = gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
@@ -164,19 +162,17 @@ gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
   gal_fft_shift_center (psfpadding, dsize);
 
   /* Convert to frequency domain. */
-  gal_fft_two_dimension_transformation (
-      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
-  gal_fft_two_dimension_transformation (imagepadding, dsize, &imagefreq,
-                                        numthreads, minmapsize,
-                                        gsl_fft_forward);
+  psffreq = gal_fft_two_dimension_transformation (
+      psfpadding, dsize, numthreads, minmapsize, gsl_fft_forward);
+  imagefreq = gal_fft_two_dimension_transformation (
+      imagepadding, dsize, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate the deconvolve image (in frequency domain).*/
   deconvolutionfreq = gal_complex_divide (imagefreq, psffreq, size, 1e-6);
 
   /* Go back to time domain. */
-  gal_fft_two_dimension_transformation (deconvolutionfreq, dsize,
-                                        &deconvolution, numthreads, minmapsize,
-                                        gsl_fft_backward);
+  deconvolution = gal_fft_two_dimension_transformation (
+      deconvolutionfreq, dsize, numthreads, minmapsize, gsl_fft_backward);
 
   /* Convert to Real number and convert it to GAL TYPE.*/
   tmp = gal_complex_to_real (deconvolution, dsize[0] * dsize[1],
@@ -229,27 +225,27 @@ richardson_lucy_calculate_next_solution (gsl_complex_packed_array *solution,
   size_t size = dsize[0] * dsize[1];
 
   /* Convert solution to frequency domain. */
-  gal_fft_two_dimension_transformation (
-      *solution, dsize, &solution_f, numthreads, minmapsize, gsl_fft_forward);
+  solution_f = gal_fft_two_dimension_transformation (
+      *solution, dsize, numthreads, minmapsize, gsl_fft_forward);
 
   yest_f = gal_complex_multiply (solution_f, h, size);
 
   /*Calculate y_est*/
-  gal_fft_two_dimension_transformation (yest_f, dsize, &yest, numthreads,
-                                        minmapsize, gsl_fft_backward);
+  yest = gal_fft_two_dimension_transformation (yest_f, dsize, numthreads,
+                                               minmapsize, gsl_fft_backward);
 
   /*Calculate y/y_est and its FFT*/
   division = gal_complex_divide (image, yest, size,
                                  1e-6); // check min value issues
 
-  gal_fft_two_dimension_transformation (
-      division, dsize, &divisionfreq, numthreads, minmapsize, gsl_fft_forward);
+  divisionfreq = gal_fft_two_dimension_transformation (
+      division, dsize, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate bracket value in Freq and Space*/
   bracket_f = gal_complex_multiply (divisionfreq, h_f, size);
 
-  gal_fft_two_dimension_transformation (bracket_f, dsize, &bracket, numthreads,
-                                        minmapsize, gsl_fft_backward);
+  bracket = gal_fft_two_dimension_transformation (
+      bracket_f, dsize, numthreads, minmapsize, gsl_fft_backward);
   // alpha value
   bracket_alpha = gal_complex_power (bracket, alpha, size);
   /* Calculate next object */
@@ -303,8 +299,8 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   richardson_lucy_init_solution (&object, size);
 
   /* Convert to frequency domain. */
-  gal_fft_two_dimension_transformation (
-      psfpadding, dsize, &psffreq, numthreads, minmapsize, gsl_fft_forward);
+  psffreq = gal_fft_two_dimension_transformation (
+      psfpadding, dsize, numthreads, minmapsize, gsl_fft_forward);
 
   /* Calculate  PSF*(u,v) */
   psffconj = gal_complex_conjugate (psffreq, size);
