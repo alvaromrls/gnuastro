@@ -208,7 +208,7 @@ deconvolve_richardson_lucy_init_solution (size_t size)
     {
       out[index * 2] = 1;
     }
-  *output = out;
+  return out;
 }
 
 void
