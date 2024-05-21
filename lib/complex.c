@@ -94,6 +94,7 @@ gal_complex_real_to_complex (double *realarray, size_t size)
       size_t complexIndex = 2 * index;
       out[complexIndex] = realarray[index];
     }
+  return out;
 }
 
 /**
