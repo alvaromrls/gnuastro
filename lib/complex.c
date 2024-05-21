@@ -34,9 +34,9 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
  * @param complexarray the array to be converted
  * @param size total number of element in the array
  * @param action how to convert the complex numbers
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @return double*  a pointer to the new data
  */
-gsl_complex_packed_array
+double *
 gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
                      complex_to_real action)
 {
