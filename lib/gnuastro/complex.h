@@ -47,6 +47,9 @@ typedef enum
 double *gal_complex_to_real (gsl_complex_packed_array complexarray,
                              size_t size, complex_to_real action);
 
+gsl_complex_packed_array gal_complex_real_to_complex (double *realarray,
+                                                      size_t size);
+
 gsl_complex_packed_array gal_complex_multiply (gsl_complex_packed_array first,
                                                gsl_complex_packed_array second,
                                                size_t size);

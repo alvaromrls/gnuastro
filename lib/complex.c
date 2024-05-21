@@ -40,7 +40,7 @@ double *
 gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
                      complex_to_real action)
 {
-  gsl_complex_packed_array out; // Easier var to work with than output
+  double *out;
 
   /* Allocate the space for the real array. */
   out = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "out");
@@ -80,6 +80,20 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
              __func__, PACKAGE_BUGREPORT, action);
     }
   return out;
+}
+
+gsl_complex_packed_array
+gal_complex_real_to_complex (double *realarray, size_t size)
+{
+  gsl_complex_packed_array out;
+  /* Allocate the space for the real array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__, "out");
+
+  for (size_t index = 0; index < size; index++)
+    {
+      size_t complexIndex = 2 * index;
+      out[complexIndex] = realarray[index];
+    }
 }
 
 /**
