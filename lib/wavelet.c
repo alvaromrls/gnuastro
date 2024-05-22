@@ -93,7 +93,6 @@ gal_data_t *
 wavelet_expand_father_function (gal_data_t *father, size_t factor,
                                 size_t minmapsize)
 {
-  size_t initsize = father->dsize[0] * father->dsize[1];
   size_t dsize[] = { father->dsize[0] * factor, father->dsize[1] * factor };
   size_t outsize = dsize[0] * dsize[1];
   double *fatherp = (double *)father->array;
@@ -144,7 +143,6 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
   gal_data_t *out = NULL;
   gal_data_t *father = NULL;
   gal_data_t *nfather;
-  size_t fatherdsize[2] = { B3_SPLINE_SIZE, B3_SPLINE_SIZE };
   double *fatherpadding;
   father = wavelet_init_father_function (minmapsize);
   gsl_complex_packed_array fcomplex = NULL;
@@ -164,7 +162,6 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
 
   for (size_t iteration = 0; iteration < numberplanes; iteration++)
     {
-      printf ("Iteration n: %d,\n", iteration);
       fatherpadding = gal_wavelet_add_padding (father->array, father->dsize,
                                                image->dsize);
       fcomplex = gal_complex_real_to_complex (fatherpadding, image->size);
@@ -175,8 +172,7 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       /* CONVOLUTION */
       fft_father = gal_fft_two_dimension_transformation (
           fcomplex, image->dsize, numthreads, minmapsize, gsl_fft_forward);
-
-      // free (fcomplex);
+      free (fcomplex);
       fft_input = gal_fft_two_dimension_transformation (
           input, image->dsize, numthreads, minmapsize, gsl_fft_forward);
       // see if needed multiply by n elements
@@ -196,7 +192,7 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       wavelet = wavelet_substract (input_real, rest_real, image->size);
 
       if (current == NULL)
-        {
+        { // 1st iteration where current is still empty
           current = gal_data_alloc (wavelet, GAL_TYPE_FLOAT64, 2, image->dsize,
                                     NULL, 1, minmapsize, 1, NULL, NULL, NULL);
           out = current;
@@ -215,6 +211,8 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
           free (father->array);
           free (father);
           free (rest);
+          free (input);
+          free (input_real);
           current->next
               = gal_data_alloc (rest_real, GAL_TYPE_FLOAT64, 2, image->dsize,
                                 NULL, 1, minmapsize, 1, NULL, NULL, NULL);
@@ -222,13 +220,13 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       else
         { // expand father
           nfather = wavelet_expand_father_function (father, 2, minmapsize);
-          // free (father->array);
-          // free (father);
+          free (father->array);
+          free (father);
           father = nfather;
+          free (input);
+          free (input_real);
           input = rest;
           input_real = rest_real;
-          // free (input);
-          // free (input_real);
         }
     }
 
@@ -277,4 +275,15 @@ gal_wavelet_add_padding (double *input, size_t *inputsize, size_t *outputsize)
         }
     }
   return out;
+}
+
+void
+gal_wavelet_free (gal_data_t *wavelet)
+{
+  if (wavelet->next != NULL)
+    {
+      gal_wavelet_free (wavelet->next);
+    }
+  free (wavelet->array);
+  free (wavelet);
 }

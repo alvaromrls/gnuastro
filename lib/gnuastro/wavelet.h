@@ -42,6 +42,8 @@ gal_data_t *wavelet_expand_father_function (gal_data_t *father, size_t factor,
 
 gal_data_t *wavelet_init_father_function (size_t minmapsize);
 
+void gal_wavelet_free (gal_data_t *wavelet);
+
 double *gal_wavelet_add_padding (double *input, size_t *inputsize,
                                  size_t *outputsize);
 

@@ -118,7 +118,6 @@ fft_free (fft_params *params, size_t numthreads)
     {
       gsl_fft_complex_workspace_free (params[thread].xwork);
       gsl_fft_complex_workspace_free (params[thread].ywork);
-      params[thread].output = NULL;
     }
 
   free (params);
