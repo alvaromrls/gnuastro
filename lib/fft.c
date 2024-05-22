@@ -118,6 +118,7 @@ fft_free (fft_params *params, size_t numthreads)
     {
       gsl_fft_complex_workspace_free (params[thread].xwork);
       gsl_fft_complex_workspace_free (params[thread].ywork);
+      params[thread].output = NULL;
     }
 
   free (params);
@@ -139,7 +140,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
                                       size_t minmapsize,
                                       gsl_fft_direction sign)
 {
-  double *out; // Easier var to access than output
+  gsl_complex_packed_array out; // Easier var to access than output
   fft_params *params;
   size_t size = dim[0] * dim[1];
   char *mmapname = NULL;
@@ -247,6 +248,7 @@ gal_fft_two_dimension_transformation (gsl_const_complex_packed_array input,
 
   /* Free FFT resources. */
   fft_free (params, numthreads);
+
   return out;
 }
 
@@ -312,6 +314,8 @@ gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim)
   size_t xdist = dim[0] / 2;
   size_t ydist = dim[1] / 2;
   size_t size = dim[0] * dim[1];
+  size_t fix_x = dim[0] % 2; // variable used to fix issues with odd kernels
+  size_t fix_y = dim[1] % 2; // variable used to fix issues with odd kernels
 
   // Swap diagonal cuadrants for FFT
   buffer = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
@@ -324,14 +328,15 @@ gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim)
       for (size_t y = 0; y < dim[1]; y++)
         {
           size_t indexkernel = (x + y * dim[0]) * 2;
-          if (x <= xdist)
+          // printf ("index kernel : %d %d \n", x, y);
+          if (x < xdist + fix_x)
             {
               size_t indexbuffer = (x + xdist + y * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
           else
             {
-              size_t indexbuffer = (x - xdist - 1 + y * dim[0]) * 2;
+              size_t indexbuffer = (x - xdist - fix_x + y * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
         }
@@ -345,19 +350,18 @@ gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim)
       for (size_t y = 0; y < dim[1]; y++)
         {
           size_t indexkernel = (x + y * dim[0]) * 2;
-          if (y <= ydist)
+          if (y < ydist + fix_y)
             {
-              size_t indexbuffer = (x + (y + ydist) * dim[0]) * 2;
+              size_t indexbuffer = (x + (y + ydist + fix_y) * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
           else
             {
-              size_t indexbuffer = (x + (y - ydist - 1) * dim[0]) * 2;
+              size_t indexbuffer = (x + (y - ydist) * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
         }
     }
-
   // Free allocated resources
   free (buffer);
 }
