@@ -27,16 +27,14 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro-internal/options.h>
 
 #define TIKHONOV_NAME "tikhonov"
-#define NAIVE_NAME "naive"
-#define RICHADSON_LUCY_NAME "rl"
-
-#define RL_ALPHA_DEFAULT_VALUE 1.0
-#define RL_DEFAULT_ITERATIONS 75
+#define NAIVE_NAME "naive" /// todo: weiner
+#define RICHADSON_LUCY_NAME "richardson-lucy"
+#define AWMLE_NAME "awmle"
 
 /* Available letters for short options:
 
-   a b c d e f g i j l n p r s t v w x y z
-   A B C E G H J Q R W X Y
+   b c d e f g j l n p r s t v w x y z
+   B C E G H J Q R W X Y
 */
 enum option_keys_enum
 {

@@ -212,14 +212,6 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
   else if (!strcmp (RICHADSON_LUCY_NAME, p->algorithmstr))
     {
       p->algorithm = DECONVOLUTION_ALGORITHM_RL;
-      if (p->alpha == 0)
-        {
-          p->alpha = RL_ALPHA_DEFAULT_VALUE;
-        }
-      if (p->numberofitr == 0)
-        {
-          p->numberofitr = RL_DEFAULT_ITERATIONS;
-        }
     }
   else
     {
