@@ -27,22 +27,18 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <errno.h>
 #include <error.h>
 #include <stdlib.h>
-#include <stdlib.h>
 #include <gsl/gsl_errno.h>
 
-#include <gnuastro/wcs.h>
-#include <gnuastro/tile.h>
 #include <gnuastro/wcs.h>
 #include <gnuastro/tile.h>
 #include <gnuastro/fits.h>
 #include <gnuastro/pointer.h>
 #include <gnuastro/threads.h>
 #include <gnuastro/convolve.h>
-#include <gnuastro/convolve.h>
+#include <gnuastro/complex.h>
 
 #include <gnuastro-internal/timing.h>
 
-#include "main.h"
 #include "main.h"
 #include "convolve.h"
 
@@ -58,45 +54,33 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
    Spectrum: sqrt(R^2+I^2)
    Phase:    arctan(I/R)
 */
-void complextoreal(double *c, size_t size, int action, double **output)
+void
+complextoreal(double *c, size_t size, int action, double **output)
 {
   double *out, *o, *of;
 
   /* Allocate the space for the real array. */
-  *output = out = gal_pointer_allocate(GAL_TYPE_FLOAT64, size, 0, __func__,
-                                       "output");
+  *output=out=gal_pointer_allocate(GAL_TYPE_FLOAT64, size, 0, __func__,
+                                   "output");
 
   /* Fill the real array with the derived value from the complex array. */
-  of = (o = out) + size;
-  switch (action)
-  {
-  case COMPLEX_TO_REAL_SPEC:
-    do
+  of=(o=out)+size;
+  switch(action)
     {
-      *o++ = sqrt(*c * *c + *(c + 1) * *(c + 1));
-      c += 2;
-    } while (o < of);
-    break;
-  case COMPLEX_TO_REAL_PHASE:
-    do
-    {
-      *o++ = atan2(*(c + 1), *c);
-      c += 2;
-    } while (o < of);
-    break;
-  case COMPLEX_TO_REAL_REAL:
-    do
-    {
-      *o++ = *c;
-      c += 2;
-    } while (o < of);
-    break;
-  default:
-    error(EXIT_FAILURE, 0, "%s: a bug! Please contact us at %s so we can "
-                           "correct it. The 'action' code %d is not recognized",
-          __func__,
-          PACKAGE_BUGREPORT, action);
-  }
+    case COMPLEX_TO_REAL_SPEC:
+      do { *o++ = sqrt( *c**c + *(c+1)**(c+1) ); c+=2; } while(o<of);
+      break;
+    case COMPLEX_TO_REAL_PHASE:
+      do { *o++ = atan2( *(c+1), *c );           c+=2; } while(o<of);
+      break;
+    case COMPLEX_TO_REAL_REAL:
+      do { *o++ = *c;                            c+=2; } while(o<of);
+      break;
+    default:
+      error(EXIT_FAILURE, 0, "%s: a bug! Please contact us at %s so we can "
+            "correct it. The 'action' code %d is not recognized", __func__,
+            PACKAGE_BUGREPORT, action);
+    }
 }
 
 
@@ -116,18 +100,20 @@ void complextoreal(double *c, size_t size, int action, double **output)
    output. Then we find and replace the imaginary component, finally,
    we put the new real component in the image.
  */
-void complexarraymultiply(double *a, double *b, size_t size)
+void
+complexarraymultiply(double *a, double *b, size_t size)
 {
   double r, *af;
 
   af=a+2*size;
   do
-  {
-    r = (*a * *b) - (*(a + 1) * *(b + 1));
-    *(a + 1) = (*(a + 1) * *b) + (*a * *(b + 1));
-    *a++ = r; /* Go onto (set) the imaginary part of a. */
-    b += 2;
-  } while (++a < af); /* Go onto the next complex number. */
+    {
+      r      = (*a * *b) - (*(a+1) * *(b+1));
+      *(a+1) = (*(a+1) * *b) + (*a * *(b+1));
+      *a++=r;            /* Go onto (set) the imaginary part of a. */
+      b+=2;
+    }
+  while(++a<af);  /* Go onto the next complex number. */
 }
 
 
@@ -144,33 +130,37 @@ void complexarraymultiply(double *a, double *b, size_t size)
    See the explanations above complexarraymultiply for an explanation
    on the loop.
  */
-void complexarraydivide(double *a, double *b, size_t size, double minsharpspec)
+void
+complexarraydivide(double *a, double *b, size_t size, double minsharpspec)
 {
   double r, *af;
 
   af=a+2*size;
   do
-  {
-    if (sqrt(*b * *b + *(b + 1) * *(b + 1)) > minsharpspec)
     {
-      r = (((*a * *b) + (*(a + 1) * *(b + 1))) / (*b * *b + *(b + 1) * *(b + 1)));
-      *(a + 1) = (((*(a + 1) * *b) - (*a * *(b + 1))) / (*b * *b + *(b + 1) * *(b + 1)));
-      *a = r;
+      if (sqrt(*b**b + *(b+1)**(b+1))>minsharpspec)
+        {
+          r      = ( ( (*a * *b) + (*(a+1) * *(b+1)) )
+                     / ( *b * *b + *(b+1) * *(b+1) ) );
+          *(a+1) = ( ( (*(a+1) * *b) - (*a * *(b+1)) )
+                     / ( *b * *b + *(b+1) * *(b+1) ) );
+          *a=r;
 
-      /* Just as a sanity check (the result should never be larger than
-         one. */
-      if (sqrt(*a * *a + *(a + 1) * *(a + 1)) > 1.00001f)
-        *a = *(a + 1) = 0.0f;
-    }
-    else
-    {
-      *a = 0;
-      *(a + 1) = 0;
-    }
+          /* Just as a sanity check (the result should never be larger than
+             one. */
+          if(sqrt(*a**a + *(a+1)**(a+1))>1.00001f)
+            *a=*(a+1)=0.0f;
+        }
+      else
+        {
+          *a=0;
+          *(a+1)=0;
+        }
 
-    a += 2;
-    b += 2;
-  } while (a < af); /* Go onto the next complex number. */
+      a+=2;
+      b+=2;
+    }
+  while(a<af);  /* Go onto the next complex number. */
 }
 
 
@@ -195,7 +185,8 @@ void complexarraydivide(double *a, double *b, size_t size, double minsharpspec)
 /******************************************************************/
 /*************      Padding and initializing      *****************/
 /******************************************************************/
-void frequency_make_padded_complex(struct convolveparams *p)
+void
+frequency_make_padded_complex(struct convolveparams *p)
 {
   size_t i, ps0, ps1;
   double *o, *op, *pimg, *pker;
@@ -218,44 +209,33 @@ void frequency_make_padded_complex(struct convolveparams *p)
 
 
   /* Allocate the space for the padded input image and fill it. */
-  pimg = p->pimg = gal_pointer_allocate(GAL_TYPE_FLOAT64, 2 * ps0 * ps1, 0,
-                                        __func__, "pimg");
-  for (i = 0; i < ps0; ++i)
-  {
-    op = (o = pimg + i * 2 * ps1) + 2 * ps1; /* pimg is complex.            */
-    if (i < is0)
+  pimg=p->pimg=gal_pointer_allocate(GAL_TYPE_FLOAT64, 2*ps0*ps1, 0,
+                                    __func__, "pimg");
+  for(i=0;i<ps0;++i)
     {
-      ff = (f = input + i * is1) + is1;
-      do
-      {
-        *o++ = *f;
-        *o++ = 0.0f;
-      } while (++f < ff);
+      op=(o=pimg+i*2*ps1)+2*ps1; /* pimg is complex.            */
+      if(i<is0)
+        {
+          ff=(f=input+i*is1)+is1;
+          do {*o++=*f; *o++=0.0f;} while(++f<ff);
+        }
+      do *o++=0.0f; while(o<op);
     }
-    do
-      *o++ = 0.0f;
-    while (o < op);
-  }
+
 
   /* Allocate the space for the padded Kernel and fill it. */
-  pker = p->pker = gal_pointer_allocate(GAL_TYPE_FLOAT64, 2 * ps0 * ps1, 0,
-                                        __func__, "pker");
-  for (i = 0; i < ps0; ++i)
-  {
-    op = (o = pker + i * 2 * ps1) + 2 * ps1; /* pker is complex.            */
-    if (i < ks0)
+  pker=p->pker=gal_pointer_allocate(GAL_TYPE_FLOAT64, 2*ps0*ps1, 0,
+                                    __func__, "pker");
+  for(i=0;i<ps0;++i)
     {
-      ff = (f = kernel + i * ks1) + ks1;
-      do
-      {
-        *o++ = *f;
-        *o++ = 0.0f;
-      } while (++f < ff);
+      op=(o=pker+i*2*ps1)+2*ps1; /* pker is complex.            */
+      if(i<ks0)
+        {
+          ff=(f=kernel+i*ks1)+ks1;
+          do {*o++=*f; *o++=0.0f;} while(++f<ff);
+        }
+      do *o++=0.0f; while(o<op);
     }
-    do
-      *o++ = 0.0f;
-    while (o < op);
-  }
 }
 
 
@@ -268,7 +248,8 @@ void frequency_make_padded_complex(struct convolveparams *p)
     NOTE: The padding to the input image (on the first axis for example)
           was 'p->kernel->dsize[0]-1'. Since 'p->kernel->dsize[0]' is
           always odd, the padding will always be even.  */
-void removepaddingcorrectroundoff(struct convolveparams *p)
+void
+removepaddingcorrectroundoff(struct convolveparams *p)
 {
   size_t ps1=p->ps1;
   size_t *isize=p->input->dsize;
@@ -280,34 +261,34 @@ void removepaddingcorrectroundoff(struct convolveparams *p)
      hi1 are the coordinates of the first pixel in the output image. In the
      case of deconvolution, if the maximum radius is larger than the input
      image, we will also only be using region that contains non-zero rows
-     and columns.*/
-  if (p->makekernel)
-  {
-    hi0 = mkwidth < isize[0] ? p->ps0 / 2 - p->makekernel : 0;
-    hi1 = mkwidth < isize[1] ? p->ps1 / 2 - p->makekernel : 0;
-    isize[0] = mkwidth < isize[0] ? 2 * p->makekernel - 1 : isize[0];
-    isize[1] = mkwidth < isize[1] ? 2 * p->makekernel - 1 : isize[1];
-  }
+     and columns. */
+  if(p->makekernel)
+    {
+      hi0      = mkwidth < isize[0] ? p->ps0/2-p->makekernel : 0;
+      hi1      = mkwidth < isize[1] ? p->ps1/2-p->makekernel : 0;
+      isize[0] = mkwidth < isize[0] ? 2*p->makekernel-1 : isize[0];
+      isize[1] = mkwidth < isize[1] ? 2*p->makekernel-1 : isize[1];
+    }
   else
-  {
-    hi0 = (p->kernel->dsize[0] - 1) / 2;
-    hi1 = (p->kernel->dsize[1] - 1) / 2;
-  }
+    {
+      hi0 = ( p->kernel->dsize[0] - 1 )/2;
+      hi1 = ( p->kernel->dsize[1] - 1 )/2;
+    }
 
   /* To start with, 'start' points to the first pixel in the final
      image: */
-  start = &rpad[hi0 * ps1 + hi1];
-  for (i = 0; i < isize[0]; ++i)
-  {
-    o = &input[i * isize[1]];
+  start=&rpad[hi0*ps1+hi1];
+  for(i=0;i<isize[0];++i)
+    {
+      o = &input[ i * isize[1] ];
 
-    df = (d = start + i * ps1) + isize[1];
-    do
-      *o++ = (*d < -CONVFLOATINGPOINTERR || *d > CONVFLOATINGPOINTERR)
-                 ? *d
-                 : 0.0f;
-    while (++d < df);
-  }
+      df = ( d = start + i * ps1 ) + isize[1];
+      do
+        *o++ = ( *d<-CONVFLOATINGPOINTERR || *d>CONVFLOATINGPOINTERR )
+          ? *d
+          : 0.0f;
+      while (++d<df);
+    }
 }
 
 
@@ -319,48 +300,50 @@ void removepaddingcorrectroundoff(struct convolveparams *p)
    other elements will point to this one later. This structure will be
    given to threads to run two times with a fixed set of parameters,
    that is why we are doing this here to facilitate the job. */
-void fftinitializer(struct convolveparams *p, struct fftonthreadparams **outfp)
+void
+fftinitializer(struct convolveparams *p, struct fftonthreadparams **outfp)
 {
   size_t i;
   struct fftonthreadparams *fp;
 
-  /* Allocate the fftonthreadparams array.  */
-  errno = 0;
-  *outfp = fp = malloc(p->cp.numthreads * sizeof *fp);
-  if (fp == NULL)
+  /* Allocate the fftonthreadparams array. */
+  errno=0;
+  *outfp=fp=malloc(p->cp.numthreads*sizeof *fp);
+  if(fp==NULL)
     error(EXIT_FAILURE, errno, "%s: allocating %zu bytes for fp",
-          __func__, p->cp.numthreads * sizeof *fp);
+          __func__, p->cp.numthreads*sizeof *fp);
 
   /* Initialize the gsl_fft_wavetable structures (these are thread
      safe): */
-  fp[0].ps0wave = gsl_fft_complex_wavetable_alloc(p->ps0);
-  fp[0].ps1wave = gsl_fft_complex_wavetable_alloc(p->ps1);
+  fp[0].ps0wave=gsl_fft_complex_wavetable_alloc(p->ps0);
+  fp[0].ps1wave=gsl_fft_complex_wavetable_alloc(p->ps1);
 
   /* Set the values for all the other threads: */
-  for (i = 0; i < p->cp.numthreads; ++i)
-  {
-    fp[i].p = p;
-    fp[i].ps0wave = fp[0].ps0wave;
-    fp[i].ps1wave = fp[0].ps1wave;
-    fp[i].ps0work = gsl_fft_complex_workspace_alloc(p->ps0);
-    fp[i].ps1work = gsl_fft_complex_workspace_alloc(p->ps1);
-  }
+  for(i=0;i<p->cp.numthreads;++i)
+    {
+      fp[i].p=p;
+      fp[i].ps0wave=fp[0].ps0wave;
+      fp[i].ps1wave=fp[0].ps1wave;
+      fp[i].ps0work=gsl_fft_complex_workspace_alloc(p->ps0);
+      fp[i].ps1work=gsl_fft_complex_workspace_alloc(p->ps1);
+    }
 }
 
 
 
 
 
-void freefp(struct fftonthreadparams *fp)
+void
+freefp(struct fftonthreadparams *fp)
 {
   size_t i;
   gsl_fft_complex_wavetable_free(fp[0].ps0wave);
   gsl_fft_complex_wavetable_free(fp[0].ps1wave);
-  for (i = 0; i < fp->p->cp.numthreads; ++i)
-  {
-    gsl_fft_complex_workspace_free(fp[i].ps0work);
-    gsl_fft_complex_workspace_free(fp[i].ps1work);
-  }
+  for(i=0;i<fp->p->cp.numthreads;++i)
+    {
+      gsl_fft_complex_workspace_free(fp[i].ps0work);
+      gsl_fft_complex_workspace_free(fp[i].ps1work);
+    }
   free(fp);
 }
 
@@ -372,27 +355,28 @@ void freefp(struct fftonthreadparams *fp)
    deconvolution (makekernel) does not produce a centered image, the
    image is translated by half the input size in both dimensions. So I
    am correcting this in the spatial domain here. */
-void correctdeconvolve(struct convolveparams *p, double **spatial)
+void
+correctdeconvolve(struct convolveparams *p, double **spatial)
 {
   double r, *s, *n, *d, *df, sum=0.0f;
   size_t i, j, ps0=p->ps0, ps1=p->ps1;
   int ii, jj, ci=p->ps0/2-1, cj=p->ps1/2-1;
 
   /* Check if the image has even sides. */
-  if (ps0 % 2 || ps1 % 2)
+  if(ps0%2 || ps1%2)
     error(EXIT_FAILURE, 0, "%s: a bug! Please contact us at %s. The padded "
-                           "image sides are not an even number",
-          __func__, PACKAGE_BUGREPORT);
+          "image sides are not an even number", __func__, PACKAGE_BUGREPORT);
 
   /* First convert the complex image to a real image: */
-  complextoreal(p->pimg, ps0 * ps1, COMPLEX_TO_REAL_SPEC, &s);
+  complextoreal(p->pimg, ps0*ps1, COMPLEX_TO_REAL_SPEC, &s);
 
-  /* Allocate the array to keep the new values */
-  errno = 0;
-  n = malloc(ps0 * ps1 * sizeof *n);
-  if (n == NULL)
+  /* Allocate the array to keep the new values. */
+  errno=0;
+  n=malloc(ps0*ps1*sizeof *n);
+  if(n==NULL)
     error(EXIT_FAILURE, errno, "%s: allocating %zu bytes for 'n'",
-          __func__, ps0 * ps1 * sizeof *n);
+          __func__, ps0*ps1*sizeof *n);
+
 
   /* Put the elements in their proper place: For example in one
      dimension where the values are actually the true distances:
@@ -411,28 +395,28 @@ void correctdeconvolve(struct convolveparams *p, double **spatial)
      The relations between the old (i and j) and new (ii and jj) come
      from something like the above line.
    */
-  for (i = 0; i < ps0; ++i)
-  {
-    ii = i > ps0 / 2 ? i - (ps0 / 2 + 1) : i + ps0 / 2 - 1;
-    for (j = 0; j < ps1; ++j)
+  for(i=0;i<ps0;++i)
     {
-      jj = j > ps1 / 2 ? j - (ps1 / 2 + 1) : j + ps1 / 2 - 1;
+      ii= i>ps0/2 ? i-(ps0/2+1) : i+ps0/2-1;
+      for(j=0;j<ps1;++j)
+        {
+          jj = j>ps1/2 ? j-(ps1/2+1) : j+ps1/2-1;
 
-      r = sqrt((ii - ci) * (ii - ci) + (jj - cj) * (jj - cj));
-      sum += n[ii * ps1 + jj] = r < p->makekernel ? s[i * ps1 + j] : 0;
+          r=sqrt( (ii-ci)*(ii-ci) + (jj-cj)*(jj-cj) );
+          sum += n[ii*ps1+jj] = r < p->makekernel ? s[i*ps1+j] : 0;
 
-      /*printf("(%zu, %zu) --> (%zu, %zu)\n", i, j, ii, jj); */
+          /*printf("(%zu, %zu) --> (%zu, %zu)\n", i, j, ii, jj); */
+        }
     }
-  }
 
 
   /* Divide all elements by the sum so the kernel is normalized: */
   df=(d=n)+ps0*ps1; do *d++/=sum; while(d<df);
 
 
-    /* Clean up. */
-    free(s);
-    *spatial = n;
+  /* Clean up. */
+  free(s);
+  *spatial=n;
 }
 
 
@@ -468,7 +452,6 @@ void correctdeconvolve(struct convolveparams *p, double **spatial)
   p->s0 or p->s1). */
 void *
 onedimensionfft(void *inparam)
-onedimensionfft(void *inparam)
 {
   struct fftonthreadparams *fp = (struct fftonthreadparams *)inparam;
   struct convolveparams *p=fp->p;
@@ -486,22 +469,13 @@ onedimensionfft(void *inparam)
      indmultip: The value to be multiplied by the value in indexs to
      specify the first pixel of the row or column.
    */
-  if (stride == 1)
-  {
-    size = p->ps1;
-    wavetable = fp->ps1wave;
-    work = fp->ps1work;
-    maxindex = p->ps0;
-    indmultip = p->ps1;
-  }
+  if(stride==1)
+    { size=p->ps1; wavetable=fp->ps1wave; work=fp->ps1work;
+      maxindex=p->ps0; indmultip=p->ps1; }
   else
-  {
-    size = p->ps0;
-    wavetable = fp->ps0wave;
-    work = fp->ps0work;
-    maxindex = p->ps1;
-    indmultip = 1;
-  }
+    { size=p->ps0; wavetable=fp->ps0wave; work=fp->ps0work;
+      maxindex=p->ps1; indmultip=1;      }
+
 
   /* Go over all the rows or columns given for this thread.
 
@@ -509,30 +483,25 @@ onedimensionfft(void *inparam)
      by each other) is stored in p->pimg. So the check below works
      both in the forward and the backward transformation.
   */
-  for (i = 0; indexs[i] != GAL_BLANK_SIZE_T; ++i)
-  {
-    data = (indexs[i] < maxindex
-                ? &pimg[2 * indexs[i] * indmultip] /* *2 because complex. */
-                : &pker[2 * (indexs[i] - maxindex) * indmultip]);
-
-    gsl_fft_complex_transform(data, stride, size, wavetable, work,
-                              forward1backwardn1);
-
-    /* Normalize in the backward transform: */
-    if (forward1backwardn1 == -1)
+  for(i=0; indexs[i]!=GAL_BLANK_SIZE_T; ++i)
     {
-      df = (d = data) + 2 * size * stride;
-      do
-      {
-        *d /= size;
-        *(d + 1) /= size;
-        d += 2 * stride;
-      } while (d < df);
+      data = ( indexs[i]<maxindex
+               ? &pimg[ 2*indexs[i]*indmultip ]   /* *2 because complex. */
+               : &pker[ 2*(indexs[i]-maxindex)*indmultip ] );
+
+      gsl_fft_complex_transform(data, stride, size, wavetable, work,
+                                forward1backwardn1);
+
+      /* Normalize in the backward transform: */
+      if(forward1backwardn1==-1)
+        {
+          df=(d=data)+2*size*stride;
+          do {*d/=size; *(d+1)/=size; d+=2*stride;} while(d<df);
+        }
     }
-  }
 
   /* Wait until all other threads finish. */
-  if (p->cp.numthreads > 1)
+  if(p->cp.numthreads>1)
     pthread_barrier_wait(fp->b);
   return NULL;
 }
@@ -546,8 +515,9 @@ onedimensionfft(void *inparam)
    of the FFT of the two). In the second case, it is assumed that we
    are looking at the complex conjugate of the array so in practice
    this will be a backward transform. */
-void twodimensionfft(struct convolveparams *p, struct fftonthreadparams *fp,
-                     int forward1backwardn1)
+void
+twodimensionfft(struct convolveparams *p, struct fftonthreadparams *fp,
+                int forward1backwardn1)
 {
   int err;
   pthread_t t;          /* All thread ids saved in this, not used. */
@@ -563,115 +533,110 @@ void twodimensionfft(struct convolveparams *p, struct fftonthreadparams *fp,
   else if(forward1backwardn1==-1) multiple=1;
   else
     error(EXIT_FAILURE, 0, "%s: a bug! The value of the variable "
-                           "'forward1backwardn1' is %d not 1 or 2. Please contact us at %s "
-                           "so we can find the cause of the problem and fix it",
-          __func__,
+          "'forward1backwardn1' is %d not 1 or 2. Please contact us at %s "
+          "so we can find the cause of the problem and fix it", __func__,
           forward1backwardn1, PACKAGE_BUGREPORT);
+
 
   /* ==================== */
   /* 1D FFT on each row. */
   /* ==================== */
-  mmapname = gal_threads_dist_in_threads(multiple * p->ps0, nt,
-                                         p->input->minmapsize,
-                                         p->cp.quietmmap,
-                                         &indexs, &thrdcols);
-  if (nt == 1)
-  {
-    fp[0].stride = 1;
-    fp[0].indexs = &indexs[0];
-    fp[0].forward1backwardn1 = forward1backwardn1;
-    onedimensionfft(&fp[0]);
-  }
+  mmapname=gal_threads_dist_in_threads(multiple*p->ps0, nt,
+                                       p->input->minmapsize,
+                                       p->cp.quietmmap,
+                                       &indexs, &thrdcols);
+  if(nt==1)
+    {
+      fp[0].stride=1;
+      fp[0].indexs=&indexs[0];
+      fp[0].forward1backwardn1=forward1backwardn1;
+      onedimensionfft(&fp[0]);
+    }
   else
-  {
-    /* Initialize the attributes. Note that this running thread
-       (that spinns off the nt threads) is also a thread, so the
-       number the barrier should be one more than the number of
-       threads spinned off. */
-    if (multiple * p->ps0 < nt)
-      nb = multiple * p->ps0 + 1;
-    else
-      nb = nt + 1;
-    gal_threads_attr_barrier_init(&attr, &b, nb);
+    {
+      /* Initialize the attributes. Note that this running thread
+         (that spinns off the nt threads) is also a thread, so the
+         number the barrier should be one more than the number of
+         threads spinned off. */
+      if( multiple*p->ps0 < nt ) nb=multiple*p->ps0+1;
+      else nb=nt+1;
+      gal_threads_attr_barrier_init(&attr, &b, nb);
 
-    /* Spin off the threads: */
-    for (i = 0; i < nt; ++i)
-      if (indexs[i * thrdcols] != GAL_BLANK_SIZE_T)
-      {
-        fp[i].id = i;
-        fp[i].b = &b;
-        fp[i].stride = 1; /* On each row, stride=1 */
-        fp[i].indexs = &indexs[i * thrdcols];
-        fp[i].forward1backwardn1 = forward1backwardn1;
-        err = pthread_create(&t, &attr, onedimensionfft, &fp[i]);
-        if (err)
-          error(EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
-                __func__, i);
-      }
+      /* Spin off the threads: */
+      for(i=0;i<nt;++i)
+        if(indexs[i*thrdcols]!=GAL_BLANK_SIZE_T)
+          {
+            fp[i].id=i;
+            fp[i].b=&b;
+            fp[i].stride=1; /* On each row, stride=1 */
+            fp[i].indexs=&indexs[i*thrdcols];
+            fp[i].forward1backwardn1=forward1backwardn1;
+            err=pthread_create(&t, &attr, onedimensionfft, &fp[i]);
+            if(err)
+              error(EXIT_FAILURE, 0, "%s: can't create thread %zu for rows",
+                    __func__, i);
+          }
 
-    /* Wait for all threads to finish and free the spaces. */
-    pthread_barrier_wait(&b);
-    pthread_attr_destroy(&attr);
-    pthread_barrier_destroy(&b);
-  }
+      /* Wait for all threads to finish and free the spaces. */
+      pthread_barrier_wait(&b);
+      pthread_attr_destroy(&attr);
+      pthread_barrier_destroy(&b);
+    }
 
   /* Clean up. */
-  if (mmapname)
-    gal_pointer_mmap_free(&mmapname, p->cp.quietmmap);
-  else
-    free(indexs);
+  if(mmapname) gal_pointer_mmap_free(&mmapname, p->cp.quietmmap);
+  else         free(indexs);
+
+
 
   /* ====================== */
   /* 1D FFT on each column. */
   /* ====================== */
   /* No comments, exact duplicate of above, except the p->ps1s! */
-  mmapname = gal_threads_dist_in_threads(multiple * p->ps1, nt,
-                                         p->input->minmapsize,
-                                         p->cp.quietmmap,
-                                         &indexs, &thrdcols);
-  if (nt == 1)
-  {
-    fp[0].stride = p->ps1;
-    fp[0].indexs = indexs;
-    fp[0].forward1backwardn1 = forward1backwardn1;
-    onedimensionfft(&fp[0]);
-  }
+  mmapname=gal_threads_dist_in_threads(multiple*p->ps1, nt,
+                                       p->input->minmapsize,
+                                       p->cp.quietmmap,
+                                       &indexs, &thrdcols);
+  if(nt==1)
+    {
+      fp[0].stride=p->ps1;
+      fp[0].indexs=indexs;
+      fp[0].forward1backwardn1=forward1backwardn1;
+      onedimensionfft(&fp[0]);
+    }
   else
-  {
-    if (multiple * p->ps1 < nt)
-      nb = multiple * p->ps1 + 1;
-    else
-      nb = nt + 1;
-    gal_threads_attr_barrier_init(&attr, &b, nb);
-    for (i = 0; i < nt; ++i)
-      if (indexs[i * thrdcols] != GAL_BLANK_SIZE_T)
-      {
-        fp[i].b = &b;
-        fp[i].stride = p->ps1; /* On each column, stride is p->ps1 */
-        fp[i].indexs = &indexs[i * thrdcols];
-        fp[i].forward1backwardn1 = forward1backwardn1;
-        err = pthread_create(&t, &attr, onedimensionfft, &fp[i]);
-        if (err)
-          error(EXIT_FAILURE, 0, "%s: can't create thread %zu for columns",
-                __func__, i);
-      }
-    pthread_barrier_wait(&b);
-    pthread_attr_destroy(&attr);
-    pthread_barrier_destroy(&b);
-  }
+    {
+      if( multiple*p->ps1 < nt ) nb=multiple*p->ps1+1;
+      else nb=nt+1;
+      gal_threads_attr_barrier_init(&attr, &b, nb);
+      for(i=0;i<nt;++i)
+        if(indexs[i*thrdcols]!=GAL_BLANK_SIZE_T)
+          {
+            fp[i].b=&b;
+            fp[i].stride=p->ps1; /* On each column, stride is p->ps1 */
+            fp[i].indexs=&indexs[i*thrdcols];
+            fp[i].forward1backwardn1=forward1backwardn1;
+            err=pthread_create(&t, &attr, onedimensionfft, &fp[i]);
+            if(err)
+              error(EXIT_FAILURE, 0, "%s: can't create thread %zu for columns",
+                    __func__, i);
+          }
+      pthread_barrier_wait(&b);
+      pthread_attr_destroy(&attr);
+      pthread_barrier_destroy(&b);
+    }
 
   /* Clean up, note that 'indexs' may be memory-mapped. */
-  if (mmapname)
-    gal_pointer_mmap_free(&mmapname, p->cp.quietmmap);
-  else
-    free(indexs);
+  if(mmapname) gal_pointer_mmap_free(&mmapname, p->cp.quietmmap);
+  else         free(indexs);
 }
 
 
 
 
 
-void convolve_frequency(struct convolveparams *p)
+void
+convolve_frequency(struct convolveparams *p)
 {
   double *tmp;
   size_t dsize[2];
@@ -681,130 +646,166 @@ void convolve_frequency(struct convolveparams *p)
 
 
   /* Make the padded arrays. */
-  if (!p->cp.quiet)
-    gettimeofday(&t1, NULL);
+  if(!p->cp.quiet) gettimeofday(&t1, NULL);
   frequency_make_padded_complex(p);
-  if (!p->cp.quiet)
+  if(!p->cp.quiet)
     gal_timing_report(&t1, "Input and Kernel images padded.", 1);
-  if (p->checkfreqsteps)
-  {
-    /* Prepare the data structure for viewing the steps, note that we
-       don't need the array that is initially made. */
-    dsize[0] = p->ps0;
-    dsize[1] = p->ps1;
-    data = gal_data_alloc(NULL, GAL_TYPE_FLOAT64, 2, dsize, NULL, 0,
+  if(p->checkfreqsteps)
+    {
+      /* Prepare the data structure for viewing the steps, note that we
+         don't need the array that is initially made. */
+      dsize[0]=p->ps0; dsize[1]=p->ps1;
+      data=gal_data_alloc(NULL, GAL_TYPE_FLOAT64, 2, dsize, NULL, 0,
                           p->cp.minmapsize, p->cp.quietmmap,
                           NULL, NULL, NULL);
-    free(data->array);
+      free(data->array);
 
-    /* Save the padded input image. */
-    complextoreal(p->pimg, p->ps0 * p->ps1, COMPLEX_TO_REAL_REAL, &tmp);
-    data->array = tmp;
-    data->name = "input padded";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    free(tmp);
-    data->name = NULL;
+      /* Save the padded input image. */
+      complextoreal(p->pimg, p->ps0*p->ps1, COMPLEX_TO_REAL_REAL, &tmp);
+      data->array=tmp; data->name="input padded";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      free(tmp); data->name=NULL;
 
-    /* Save the padded kernel image. */
-    complextoreal(p->pker, p->ps0 * p->ps1, COMPLEX_TO_REAL_REAL, &tmp);
-    data->array = tmp;
-    data->name = "kernel padded";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    free(tmp);
-    data->name = NULL;
-  }
+      /* Save the padded kernel image. */
+      complextoreal(p->pker, p->ps0*p->ps1, COMPLEX_TO_REAL_REAL, &tmp);
+      data->array=tmp; data->name="kernel padded";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      free(tmp); data->name=NULL;
+    }
+
 
   /* Initialize the structures: */
   fftinitializer(p, &fp);
 
-  /* Forward 2D FFT on each image. */
-  if (!p->cp.quiet)
-    gettimeofday(&t1, NULL);
-  twodimensionfft(p, fp, 1);
-  if (!p->cp.quiet)
-    gal_timing_report(&t1, "Images converted to frequency domain.", 1);
-  if (p->checkfreqsteps)
-  {
-    complextoreal(p->pimg, p->ps0 * p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
-    data->array = tmp;
-    data->name = "input transformed";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    free(tmp);
-    data->name = NULL;
 
-    complextoreal(p->pker, p->ps0 * p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
-    data->array = tmp;
-    data->name = "kernel transformed";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    free(tmp);
-    data->name = NULL;
-  }
+  /* Forward 2D FFT on each image. */
+  if(!p->cp.quiet) gettimeofday(&t1, NULL);
+  twodimensionfft(p, fp, 1);
+  if(!p->cp.quiet)
+    gal_timing_report(&t1, "Images converted to frequency domain.", 1);
+  if(p->checkfreqsteps)
+    {
+      complextoreal(p->pimg, p->ps0*p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
+      data->array=tmp; data->name="input transformed";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      free(tmp); data->name=NULL;
+
+      complextoreal(p->pker, p->ps0*p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
+      data->array=tmp; data->name="kernel transformed";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      free(tmp); data->name=NULL;
+    }
 
   /* Multiply or divide the two arrays and save them in the output.*/
-  if (!p->cp.quiet)
-    gettimeofday(&t1, NULL);
-  if (p->makekernel)
-  {
-    complexarraydivide(p->pimg, p->pker, p->ps0 * p->ps1, p->minsharpspec);
-    if (!p->cp.quiet)
-      gal_timing_report(&t1, "Divided in the frequency domain.", 1);
-  }
+  if(!p->cp.quiet) gettimeofday(&t1, NULL);
+  if(p->makekernel)
+    {
+      complexarraydivide(p->pimg, p->pker, p->ps0*p->ps1, p->minsharpspec);
+      if(!p->cp.quiet)
+        gal_timing_report(&t1, "Divided in the frequency domain.", 1);
+    }
   else
-  {
-    complexarraymultiply(p->pimg, p->pker, p->ps0 * p->ps1);
-    if (!p->cp.quiet)
-      gal_timing_report(&t1, "Multiplied in the frequency domain.", 1);
-  }
-  if (p->checkfreqsteps)
-  {
-    complextoreal(p->pimg, p->ps0 * p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
-    data->array = tmp;
-    data->name = p->makekernel ? "Divided" : "Multiplied";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    free(tmp);
-    data->name = NULL;
-  }
+    {
+      complexarraymultiply(p->pimg, p->pker, p->ps0*p->ps1);
+      if(!p->cp.quiet)
+        gal_timing_report(&t1, "Multiplied in the frequency domain.", 1);
+    }
+  if(p->checkfreqsteps)
+    {
+      complextoreal(p->pimg, p->ps0*p->ps1, COMPLEX_TO_REAL_SPEC, &tmp);
+      data->array=tmp; data->name=p->makekernel ? "Divided" : "Multiplied";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      free(tmp); data->name=NULL;
+    }
 
   /* Forward (in practice inverse) 2D FFT on each image. */
-  if (!p->cp.quiet)
-    gettimeofday(&t1, NULL);
+  if(!p->cp.quiet) gettimeofday(&t1, NULL);
   twodimensionfft(p, fp, -1);
-  if (p->makekernel)
+  if(p->makekernel)
     correctdeconvolve(p, &p->rpad);
   else
-    complextoreal(p->pimg, p->ps0 * p->ps1, COMPLEX_TO_REAL_REAL, &p->rpad);
-  if (!p->cp.quiet)
+    complextoreal(p->pimg, p->ps0*p->ps1, COMPLEX_TO_REAL_REAL, &p->rpad);
+  if(!p->cp.quiet)
     gal_timing_report(&t1, "Converted back to the spatial domain.", 1);
-  if (p->checkfreqsteps)
-  {
-    data->array = p->rpad;
-    data->name = "padded output";
-    gal_fits_img_write(data, p->freqstepsname, NULL, PROGRAM_NAME);
-    data->name = NULL;
-    data->array = NULL;
-  }
+  if(p->checkfreqsteps)
+    {
+      data->array=p->rpad; data->name="padded output";
+      gal_fits_img_write(data, p->freqstepsname, NULL, 0);
+      data->name=NULL; data->array=NULL;
+    }
 
   /* Free the padded arrays (they are no longer needed) and put the
      converted array (that is real, not complex) in p->pimg. */
   gal_data_free(data);
   free(p->pimg);
   free(p->pker);
-  gal_data_free(data);
-  free(p->pimg);
-  free(p->pker);
 
   /* Crop out the center, numbers smaller than 10^{-17} are errors,
      remove them. */
-  if (!p->cp.quiet)
-    gettimeofday(&t1, NULL);
+  if(!p->cp.quiet) gettimeofday(&t1, NULL);
   removepaddingcorrectroundoff(p);
-  if (!p->cp.quiet)
-    gal_timing_report(&t1, "Padded parts removed.", 1);
+  if(!p->cp.quiet) gal_timing_report(&t1, "Padded parts removed.", 1);
+
 
   /* Free all the allocated space. */
   freefp(fp);
-  freefp(fp);
 }
+
+
+
+
+
+void
+convolve_spatial(struct convolveparams *p)
+{
+  gal_data_t *out, *check;
+  int multidim=p->input->ndim>1;
+  struct gal_options_common_params *cp=&p->cp;
+
+
+  /* Prepare the mesh structure. */
+  if(multidim) gal_tile_full_two_layers(p->input, &cp->tl);
+
+  /* Save the tile IDs if they are requested. */
+  if(multidim && cp->tl.tilecheckname)
+    {
+      check=gal_tile_block_check_tiles(cp->tl.tiles);
+      gal_fits_img_write(check, cp->tl.tilecheckname, NULL, 0);
+      gal_data_free(check);
+    }
+
+  /* Do the spatial convolution. One of the main reason someone would
+     want to do spatial domain convolution with this Convolve program
+     is edge correction. So by default we assume it and will only
+     ignore it if the user asks. */
+  out=gal_convolve_spatial(multidim ? cp->tl.tiles : p->input,
+                           p->kernel,
+                           cp->numthreads,
+                           multidim ? !p->noedgecorrection : 1,
+                           multidim ? cp->tl.workoverch : 1,
+                           p->conv_on_blank);
+
+  /* Clean up: free the actual input and replace it's pointer with the
+     convolved dataset to save as output. */
+  gal_tile_full_free_contents(&cp->tl);
+  gal_data_free(p->input);
+  p->input=out;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -813,61 +814,32 @@ void convolve_frequency(struct convolveparams *p)
 /******************************************************************/
 /*************         Top-level function         *****************/
 /******************************************************************/
-void convolve(struct convolveparams *p)
+void
+convolve(struct convolveparams *p)
 {
-  gal_data_t *out, *check;
-  int multidim=p->input->ndim>1;
   struct gal_options_common_params *cp=&p->cp;
 
-
   /* Do the convolution. */
-  if (p->domain == CONVOLVE_DOMAIN_SPATIAL)
-  {
-    /* Prepare the mesh structure. */
-    if (multidim)
-      gal_tile_full_two_layers(p->input, &cp->tl);
-
-    /* Save the tile IDs if they are requested. */
-    if (multidim && cp->tl.tilecheckname)
-    {
-      check = gal_tile_block_check_tiles(cp->tl.tiles);
-      gal_fits_img_write(check, cp->tl.tilecheckname, NULL, PROGRAM_NAME);
-      gal_data_free(check);
-    }
-
-    /* Do the spatial convolution. One of the main reason someone would
-       want to do spatial domain convolution with this Convolve program
-       is edge correction. So by default we assume it and will only
-       ignore it if the user asks.*/
-    out = gal_convolve_spatial(multidim ? cp->tl.tiles : p->input, p->kernel,
-                               cp->numthreads,
-                               multidim ? !p->noedgecorrection : 1,
-                               multidim ? cp->tl.workoverch : 1);
-
-    /* Clean up: free the actual input and replace it's pointer with the
-       convolved dataset to save as output. */
-    gal_tile_full_free_contents(&cp->tl);
-    gal_data_free(p->input);
-    p->input = out;
-  }
-  else
-    convolve_frequency(p);
-
-  /* Save the output (which is in p->input) array. */
-  if (p->input->ndim == 1)
-    gal_table_write(p->input, NULL, NULL, p->cp.tableformat, p->cp.output,
-                    "CONVOLVED", 0);
-  else
-    gal_fits_img_write_to_type(p->input, cp->output, NULL, PROGRAM_NAME,
-                               cp->type);
+  if(p->domain==CONVOLVE_DOMAIN_SPATIAL) convolve_spatial(p);
+  else                                   convolve_frequency(p);
 
   /* Write Convolve's parameters as keywords into the first extension of
      the output. */
-  if (gal_fits_name_is_fits(p->cp.output))
-  {
-    gal_fits_key_write_filename("input", p->filename, &cp->okeys, 1);
-    gal_fits_key_write_config(&cp->okeys, "Convolve configuration",
-                              "CONVOLVE-CONFIG", cp->output, "0");
-  }
-  printf("  - Output: %s\n", p->cp.output);
+  if( gal_fits_name_is_fits(p->cp.output) )
+    {
+      gal_fits_key_write_filename("input", p->filename, &cp->ckeys, 1,
+                                  cp->quiet);
+      gal_fits_key_write(cp->ckeys, cp->output, "0", "NONE", 1, 1);
+    }
+
+  /* Save the output (which is in p->input) array. */
+  if(p->input->ndim==1)
+    gal_table_write(p->input, NULL, NULL, p->cp.tableformat, p->cp.output,
+                    "CONVOLVED", 0, 0);
+  else
+    gal_fits_img_write_to_type(p->input, cp->output, NULL, cp->type, 0);
+
+  /* Inform the user that the job is done. */
+  if(!p->cp.quiet)
+    printf("  - Output: %s\n", p->cp.output);
 }

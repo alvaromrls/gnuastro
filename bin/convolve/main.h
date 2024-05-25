@@ -5,7 +5,7 @@ Convolve is part of GNU Astronomy Utilities (Gnuastro) package.
 Original author:
      Mohammad Akhlaghi <mohammad@akhlaghi.org>
 Contributing author(s):
-Copyright (C) 2015-2024 Free Software Foundation, Inc.
+Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 Gnuastro is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -40,19 +40,6 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 /* Macros */
 #define CONVFLOATINGPOINTERR 1e-10
 #define INPUT_USE_TYPE       GAL_TYPE_FLOAT32
-
-
-
-
-/* Enumerators */
-enum complex_to_real
-{
-  COMPLEX_TO_REAL_INVALID, /* ==0 by C standard. */
-
-  COMPLEX_TO_REAL_SPEC,
-  COMPLEX_TO_REAL_PHASE,
-  COMPLEX_TO_REAL_REAL,
-};
 
 enum domain_codes
 {
