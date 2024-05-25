@@ -27,7 +27,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro-internal/options.h>
 
 #define TIKHONOV_NAME "tikhonov"
-#define NAIVE_NAME "naive" /// todo: weiner
+#define WEINER_NAME "weiner" 
 #define RICHADSON_LUCY_NAME "richardson-lucy"
 #define AWMLE_NAME "awmle"
 

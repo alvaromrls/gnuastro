@@ -128,7 +128,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 }
 
 /**
- * @brief Implements a deconvolution using the naive method:
+ * @brief Implements a deconvolution using the weiner method:
  * O(u,v) = I(u,v)/PSF(u,v)
  *
  * @param image
@@ -138,7 +138,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
  * @param output
  */
 void
-gal_deconvolve_naive (const gal_data_t *image, const gal_data_t *PSF,
+gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
                       size_t numthreads, size_t minmapsize,
                       gal_data_t **output)
 {

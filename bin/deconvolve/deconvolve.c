@@ -40,9 +40,9 @@ deconvolve (struct deconvolve_params *p)
 
   switch (p->algorithm)
     {
-    case DECONVOLUTION_ALGORITHM_NAIVE:
-      printf ("Executing naive algorithm \n");
-      gal_deconvolve_naive (p->input, p->kernel, p->cp.numthreads,
+    case DECONVOLUTION_ALGORITHM_WEINER:
+      printf ("Executing weiner algorithm \n");
+      gal_deconvolve_weiner (p->input, p->kernel, p->cp.numthreads,
                             p->cp.minmapsize, &data);
       break;
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
