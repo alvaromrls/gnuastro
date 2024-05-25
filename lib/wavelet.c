@@ -33,12 +33,12 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gsl/gsl_interp2d.h>
 #include <gsl/gsl_spline2d.h>
 
+#include <gnuastro/convolve.h>
 #include <gnuastro/data.h>
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
 #include <gnuastro/warp.h>
 #include <gnuastro/wavelet.h>
-#include <gnuastro/convolve.h>
 
 #define B3_SPLINE_SIZE 5
 #define B3_SPLINE_1ST_ROW                                                     \
@@ -59,7 +59,7 @@ wavelet_substract (double *first, double *second, size_t size)
 {
   double *out = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__,
                                       "substract");
-  for (size_t i; i < size; i++)
+  for (size_t i = 0; i < size; i++)
     {
       out[i] = first[i] - second[i];
     }
@@ -169,9 +169,8 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       gal_fft_shift_center (fcomplex, image->dsize);
 
       /* CONVOLUTION */
-      rest = gal_convolve_frequency(fatherpadding,input,father->dsize[0],
-                                    father->dsize[1], numthreads, 
-                                     minmapsize);
+      rest = gal_convolve_frequency (fcomplex, input, father->dsize[0],
+                                     father->dsize[1], numthreads, minmapsize);
       rest_real
           = gal_complex_to_real (rest, image->size, COMPLEX_TO_REAL_REAL);
 
