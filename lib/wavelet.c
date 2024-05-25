@@ -38,6 +38,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/pointer.h>
 #include <gnuastro/warp.h>
 #include <gnuastro/wavelet.h>
+#include <gnuastro/convolve.h>
 
 #define B3_SPLINE_SIZE 5
 #define B3_SPLINE_1ST_ROW                                                     \
@@ -146,7 +147,6 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
   double *fatherpadding;
   father = wavelet_init_father_function (minmapsize);
   gsl_complex_packed_array fcomplex = NULL;
-  gsl_complex_packed_array fft_father = NULL;
 
   gal_data_t *input_float
       = gal_data_copy_to_new_type (image, GAL_TYPE_FLOAT64);
@@ -155,8 +155,7 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       = gal_complex_real_to_complex (input_float->array, image->size);
   double *input_real = input_float->array;
 
-  gsl_complex_packed_array fft_input = NULL;
-  gsl_complex_packed_array fft_rest = NULL, rest = NULL;
+  gsl_complex_packed_array rest = NULL;
   double *rest_real;
   double *wavelet;
 
@@ -170,21 +169,9 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       gal_fft_shift_center (fcomplex, image->dsize);
 
       /* CONVOLUTION */
-      fft_father = gal_fft_two_dimension_transformation (
-          fcomplex, image->dsize, numthreads, minmapsize, gsl_fft_forward);
-      free (fcomplex);
-      fft_input = gal_fft_two_dimension_transformation (
-          input, image->dsize, numthreads, minmapsize, gsl_fft_forward);
-      // see if needed multiply by n elements
-
-      fft_rest = gal_complex_multiply (fft_father, fft_input, image->size);
-      // gal_complex_scale (fft_rest, image->size, image->size);
-      free (fft_input);
-      free (fft_father);
-
-      rest = gal_fft_two_dimension_transformation (
-          fft_rest, image->dsize, numthreads, minmapsize, gsl_fft_backward);
-      free (fft_rest);
+      rest = gal_convolve_frequency(fatherpadding,input,father->dsize[0],
+                                    father->dsize[1], numthreads, 
+                                     minmapsize);
       rest_real
           = gal_complex_to_real (rest, image->size, COMPLEX_TO_REAL_REAL);
 

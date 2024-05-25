@@ -28,6 +28,8 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
+#include <gsl/gsl_fft_complex.h>
+
 #include <gnuastro/convolve.h>
 #include <gnuastro/dimension.h>
 #include <gnuastro/list.h>
@@ -544,4 +546,35 @@ void gal_convolve_spatial_correct_ch_edge(gal_data_t *tiles, gal_data_t *kernel,
   /* Call the general function, which will do the correction. */
   gal_convolve_spatial_general(tiles, kernel, numthreads, edgecorrection, 0,
                                conv_on_blank, tocorrect);
+}
+
+
+gsl_complex_packed_array gal_convolve_frequency (
+                        gsl_complex_packed_array first, 
+                        gsl_complex_packed_array second, 
+                        size_t xsize, size_t ysize,
+                        size_t numthreads, size_t minmapsize){
+  /* Pointer declaration */
+  gsl_complex_packed_array fft_first = NULL;
+  gsl_complex_packed_array fft_second = NULL;
+  gsl_complex_packed_array fft_convolve = NULL;
+  gsl_complex_packed_array convolve = NULL;
+  size_t dsize[2] = {xsize,ysize};
+
+  /* Freq domain */
+  fft_first = gal_fft_two_dimension_transformation (
+      first, dsize, numthreads, minmapsize, gsl_fft_forward);
+  fft_second = gal_fft_two_dimension_transformation (
+      second, dsize, numthreads, minmapsize, gsl_fft_forward);
+
+  /* Element-wise mutiplication */
+  fft_convolve = gal_complex_multiply (fft_first, fft_second, xsize*ysize);
+  free (fft_first);
+  free (fft_second);
+
+  /* Return to space domain */
+  convolve = gal_fft_two_dimension_transformation (
+      fft_convolve, dsize, numthreads, minmapsize, gsl_fft_backward);
+  free (fft_convolve);
+  return convolve;
 }
