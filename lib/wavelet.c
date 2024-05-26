@@ -169,8 +169,8 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
       gal_fft_shift_center (fcomplex, image->dsize);
 
       /* CONVOLUTION */
-      rest = gal_convolve_frequency (fcomplex, input, father->dsize[0],
-                                     father->dsize[1], numthreads, minmapsize);
+      rest = gal_convolve_frequency (fcomplex, input, image->dsize[0],
+                                     image->dsize[1], numthreads, minmapsize);
       rest_real
           = gal_complex_to_real (rest, image->size, COMPLEX_TO_REAL_REAL);
 
