@@ -351,12 +351,12 @@ gal_fft_shift_center (gsl_complex_packed_array kernel, size_t *dim)
           size_t indexkernel = (x + y * dim[0]) * 2;
           if (y < ydist + fix_y)
             {
-              size_t indexbuffer = (x + (y + ydist + fix_y) * dim[0]) * 2;
+              size_t indexbuffer = (x + (y + ydist) * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
           else
             {
-              size_t indexbuffer = (x + (y - ydist) * dim[0]) * 2;
+              size_t indexbuffer = (x + (y - ydist - fix_y) * dim[0]) * 2;
               kernel[indexkernel] = buffer[indexbuffer];
             }
         }
