@@ -50,10 +50,9 @@ deconvolve_richardson_lucy_init_solution (size_t size);
  * @param numthreads Number of threads in FFT
  * @param output
  */
-void
+gal_data_t *
 gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
-                         double lambda, size_t numthreads, size_t minmapsize,
-                         gal_data_t **output)
+                         double lambda, size_t numthreads, size_t minmapsize)
 {
   gsl_complex_packed_array imagepadding;  // original image after padding
   gsl_complex_packed_array psfpadding;    // kernel after padding
@@ -112,7 +111,6 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
                              COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
-  *output = data;
 
   /* Free resources. */
   free (imagepadding);
@@ -125,6 +123,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
   free (denominator);
   free (deconvolutionfreq);
   free (deconvolution);
+  return data;
 }
 
 /**
@@ -135,12 +134,10 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
  * @param PSF
  * @param numthreads
  * @param minmapsize
- * @param output
  */
-void
+gal_data_t *
 gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
-                      size_t numthreads, size_t minmapsize,
-                      gal_data_t **output)
+                       size_t numthreads, size_t minmapsize)
 {
   gsl_complex_packed_array imagepadding;      // original image after padding
   gsl_complex_packed_array psfpadding;        // kernel after padding
@@ -185,7 +182,6 @@ gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
                              COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
-  *output = data;
 
   /* Free resources. */
   free (imagepadding);
@@ -193,6 +189,8 @@ gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
   free (psffreq);
   free (deconvolutionfreq);
   free (deconvolution);
+
+  return data;
 }
 
 gsl_complex_packed_array
@@ -269,11 +267,10 @@ deconvolve_richardson_lucy_calculate_next_solution (
   *solution = next_solution;
 }
 
-void
+gal_data_t *
 gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
                                 size_t iterations, double alpha,
-                                size_t minmapsize, size_t numthreads,
-                                gal_data_t **output)
+                                size_t minmapsize, size_t numthreads)
 {
   gsl_complex_packed_array imagepadding; // original image after padding I(x,y)
   gsl_complex_packed_array psfpadding;   // kernel after padding PSF(x,y)
@@ -321,11 +318,12 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
                              COMPLEX_TO_REAL_REAL);
   data = gal_data_alloc (tmp, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
                          1, NULL, NULL, NULL); // data has to be 32
-  *output = data;
 
   free (imagepadding);
   free (psfpadding);
   free (psffreq);
   free (psffconj);
   free (object);
+
+  return data;
 }

@@ -42,21 +42,21 @@ deconvolve (struct deconvolve_params *p)
     {
     case DECONVOLUTION_ALGORITHM_WEINER:
       printf ("Executing weiner algorithm \n");
-      gal_deconvolve_weiner (p->input, p->kernel, p->cp.numthreads,
-                            p->cp.minmapsize, &data);
+      data = gal_deconvolve_weiner (p->input, p->kernel, p->cp.numthreads,
+                                    p->cp.minmapsize);
       break;
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
       printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
-      gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
-                               p->cp.numthreads, p->cp.minmapsize, &data);
+      data = gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
+                                      p->cp.numthreads, p->cp.minmapsize);
       break;
     case DECONVOLUTION_ALGORITHM_RL:
       printf ("Executing richardson-lucy algorithm with alpha = %f and %zu "
               "iterations\n",
               p->alpha, p->numberofitr);
-      gal_deconvolve_richardson_lucy (p->input, p->kernel, p->numberofitr,
-                                      p->alpha, p->cp.minmapsize,
-                                      p->cp.numthreads, &data);
+      data = gal_deconvolve_richardson_lucy (
+          p->input, p->kernel, p->numberofitr, p->alpha, p->cp.minmapsize,
+          p->cp.numthreads);
       break;
     default:
       error (EXIT_FAILURE, 0, "Not implemented algorithm");

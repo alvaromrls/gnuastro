@@ -27,17 +27,18 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 
 #include <gnuastro/data.h>
 
-void gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
-                              double lambda, size_t numthreads,
-                              size_t minmapsize, gal_data_t **output);
+gal_data_t *gal_deconvolve_tikhonov (const gal_data_t *image,
+                                     const gal_data_t *PSF, double lambda,
+                                     size_t numthreads, size_t minmapsize);
 
-void gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
-                           size_t numthreads, size_t minmapsize,
-                           gal_data_t **output);
+gal_data_t *gal_deconvolve_weiner (const gal_data_t *image,
+                                   const gal_data_t *PSF, size_t numthreads,
+                                   size_t minmapsize);
 
-void gal_deconvolve_richardson_lucy (const gal_data_t *image,
-                                     const gal_data_t *PSF, size_t iterations,
-                                     double alpha, size_t minmapsize,
-                                     size_t numthreads, gal_data_t **output);
+gal_data_t *gal_deconvolve_richardson_lucy (const gal_data_t *image,
+                                            const gal_data_t *PSF,
+                                            size_t iterations, double alpha,
+                                            size_t minmapsize,
+                                            size_t numthreads);
 
 #endif
