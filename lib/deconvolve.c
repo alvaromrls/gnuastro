@@ -33,6 +33,9 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
 
+double *deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
+                                     double sigma, double *likehood);
+
 void deconvolve_richardson_lucy_calculate_next_solution (
     gsl_complex_packed_array *solution, gsl_complex_packed_array h,
     gsl_complex_packed_array h_f, gsl_complex_packed_array image, double alpha,
@@ -305,9 +308,12 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Calculate  PSF*(u,v) */
   psffconj = gal_complex_conjugate (psffreq, size);
-
+  printf ("Cumulative sum from og image is \t %f \n",
+          gal_complex_cumulative_sum (imagepadding, size));
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
+      printf ("Cumulative sum at iteration %d is \t %f \n", iteration,
+              gal_complex_cumulative_sum (object, size));
       deconvolve_richardson_lucy_calculate_next_solution (
           &object, psffreq, psffconj, imagepadding, alpha, dsize, minmapsize,
           numthreads);
@@ -326,4 +332,124 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   free (object);
 
   return data;
+}
+
+#define DECONVOLVE_SIGMA_MIN 1.0e-6
+
+double *
+deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
+                             double sigma, double *likehood)
+{
+
+  // check image is d64
+
+  double size = image->size;
+  double sizex = image->dsize[0];
+  double sizey = image->dsize[1];
+  double *output
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "pprime");
+  double *imagearray = image->array;
+  double *projectionarray = projection->array;
+  *likehood = 0.0;
+
+  double v = sigma;
+  double vv = sigma * sigma;
+  double vv2 = 2. * vv;
+  double exp2 = exp (-1. / vv);
+  double expantor = exp (1. / vv2);
+  double lc = log (sqrt (M_PI * 2 * v));
+  double max = 2.5 * v;
+
+  if (sigma < DECONVOLVE_SIGMA_MIN)
+    // Sigma so small we can consider poisson noise
+    {
+      mempcpy (output, image->array, sizeof (double) * size);
+      for (size_t i = 0; i < size; i++)
+        {
+          if (imagearray[i] != 0.0)
+            {
+              *likehood += (imagearray[i]
+                                * (1 + log (projectionarray[i])
+                                   - log (fabs (imagearray[i])))
+                            - projectionarray[i]);
+            }
+          else
+            {
+              *likehood -= projectionarray[i];
+            }
+        }
+    }
+  else
+    {
+      for (size_t i = 0; i < size; i++)
+        {
+          double p = imagearray[i];
+          double hh = projectionarray[i];
+          int lower = (int)(p - 2.5 * v);
+          int upper = (int)(p + 2.5 * v);
+          double hp = (hh - p) * (hh - p) + 1.;
+          double lhp = log (hp);
+          double new = 0;
+          double serieantden, serieantnum, termeantnum, termeantden, expant;
+          double termeantnumsup, termeantdensup, termeantnuminf,
+              termeantdeninf;
+
+          if (p <= max)
+            {
+              lower = 0;
+              if (upper < 1)
+                {
+                  upper = 1;
+                }
+              serieantden = exp (-(1. - p) * (1. - p) / vv2) * hh / hp;
+              serieantnum = serieantden;
+              termeantnum = serieantden;
+              termeantden = serieantden;
+
+              expant = exp (-(1. - 2. * p) / vv2);
+              for (int k = 2; k <= upper; ++k)
+                {
+                  expant = expant * exp2;
+                  termeantnum = termeantnum * hh / (k - 1) * expant;
+                  termeantden = termeantden * hh / k * expant;
+                  serieantnum += termeantnum;
+                  serieantden += termeantden;
+                }
+              serieantden += exp (-p * p / vv2) / hp;
+              new = -lc - hh + log (serieantden) + lhp;
+            }
+          else
+            {
+              double lp = log (p);
+              double lh = log (hh);
+              double l2 = log (sqrt (2 * M_PI * p));
+
+              serieantden = 1. / hp;
+              serieantnum = p / hp;
+              termeantnumsup = serieantnum;
+              termeantdensup = serieantden;
+              termeantnuminf = serieantnum;
+              termeantdeninf = serieantden;
+              expant = expantor;
+
+              int k = (int)(p) + 1;
+              int l = (int)(p)-1;
+              for (; k <= upper && l >= lower; k++, l--)
+                {
+                  expant = expant * exp2;
+                  termeantnumsup = termeantnumsup * hh / (k - 1) * expant;
+                  termeantdensup = termeantdensup * hh / k * expant;
+                  termeantnuminf = termeantnuminf * l / hh * expant;
+                  termeantdeninf = termeantdeninf * (l + 1) / hh * expant;
+                  serieantnum += termeantnumsup + termeantnuminf;
+                  serieantden += termeantdensup + termeantdeninf;
+                }
+              new = -lc - hh + log (serieantden) + p *lh - l2 - p *lp + p
+                    + lhp;
+            }
+          output[i] = serieantnum / serieantden;
+          (*likehood) += new;
+        }
+    }
+  return output;
 }
