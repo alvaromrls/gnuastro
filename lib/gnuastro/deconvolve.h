@@ -41,4 +41,14 @@ gal_data_t *gal_deconvolve_richardson_lucy (const gal_data_t *image,
                                             size_t minmapsize,
                                             size_t numthreads);
 
+gal_data_t *gal_deconvolve_AWMLE (const gal_data_t *image,
+                                  const gal_data_t *PSF, size_t iterations,
+                                  size_t waves, double tolerance, double alpha,
+                                  size_t minmapsize, size_t numthreads);
+
+gal_data_t *
+deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
+                                       gal_data_t *residue, double sigma,
+                                       size_t minmapsize, size_t numthreads);
+
 #endif

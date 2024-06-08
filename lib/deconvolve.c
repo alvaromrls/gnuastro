@@ -31,16 +31,28 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/complex.h>
 #include <gnuastro/deconvolve.h>
 #include <gnuastro/fft.h>
+#include <gnuastro/list.h>
 #include <gnuastro/pointer.h>
 #include <gnuastro/wavelet.h>
 
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_statistics_double.h>
+
 double *deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
                                      double sigma, double *likehood);
+
+gal_data_t *deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet,
+                                           gal_data_t *projection,
+                                           gal_data_t *noise, size_t ampl,
+                                           size_t numthreads,
+                                           size_t minmapsize);
 
 void deconvolve_richardson_lucy_calculate_next_solution (
     gsl_complex_packed_array *solution, gsl_complex_packed_array h,
     gsl_complex_packed_array h_f, gsl_complex_packed_array image, double alpha,
     size_t *dsize, size_t minmapsize, size_t numthreads);
+
 gsl_complex_packed_array
 deconvolve_richardson_lucy_init_solution (size_t size);
 /**
@@ -342,8 +354,6 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
   // check image is d64
 
   double size = image->size;
-  double sizex = image->dsize[0];
-  double sizey = image->dsize[1];
   double *output
       = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "pprime");
   double *imagearray = image->array;
@@ -453,15 +463,15 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
 }
 
 #define DECONVOLVE_MASK_FACTOR 1.5
+#define DECONVOLVE_NOISE_LEVEL_ADJUST 1.0
 
 gal_data_t *
 deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
                                gal_data_t *noise, size_t ampl,
                                size_t numthreads, size_t minmapsize)
 {
+  size_t *dsize = wavelet->dsize;
   size_t size = wavelet->size;
-  size_t sizex = wavelet->dsize[0];
-  size_t sizey = wavelet->dsize[1];
   size_t ampl2 = ampl * ampl;
   size_t dsize_ampl[] = { ampl, ampl };
 
@@ -481,7 +491,7 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
   free (window);
   gal_fft_shift_center (windowc, wavelet->dsize);
   gsl_complex_packed_array fft_window = gal_fft_two_dimension_transformation (
-      windowc, size, numthreads, minmapsize, gsl_fft_forward);
+      windowc, dsize, numthreads, minmapsize, gsl_fft_forward);
   free (windowc);
 
   // Calculate and transform square error to wavelet and projection
@@ -499,7 +509,7 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
   free (error);
 
   gsl_complex_packed_array fft_errorsq = gal_fft_two_dimension_transformation (
-      error_square, size, numthreads, minmapsize, gsl_fft_forward);
+      error_square, dsize, numthreads, minmapsize, gsl_fft_forward);
   free (error_square);
 
   // Calculate mask
@@ -510,7 +520,7 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
 
   gsl_complex_packed_array convolutionc
       = gal_fft_two_dimension_transformation (
-          convolution_freq, size, numthreads, minmapsize, gsl_fft_backward);
+          convolution_freq, dsize, numthreads, minmapsize, gsl_fft_backward);
   free (convolution_freq);
 
   double *convolution
@@ -537,5 +547,92 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
       // todo: check low values ?
     }
   free (aux);
-  return mask;
+  return gal_data_alloc (mask, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
+                         1, NULL, NULL, NULL);
+}
+
+/**
+ * @brief
+ *
+ * @param planes
+ * @param sizex
+ * @param sizey
+ * @return gal_data_t*
+ */
+gal_data_t *
+deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
+                                       gal_data_t *residue, double sigma,
+                                       size_t minmapsize, size_t numthreads)
+{
+  // Allocate resources
+  size_t size = dsize[0] * dsize[1];
+  const gsl_rng_type *T;
+  gsl_rng *r;
+  gsl_rng_env_setup ();
+
+  T = gsl_rng_default;
+  r = gsl_rng_alloc (T);
+
+  // Generate a Gauss Noise Matrix
+  double *gaussian
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "gaussian");
+  for (size_t i = 0; i < size; i++)
+    {
+      gaussian[i] = gsl_ran_gaussian (r, 1.0);
+    }
+
+  gsl_rng_free (r); // free random resources
+
+  // Wavelet transformation to the Gaussian distr
+  gal_data_t *gaussian_noise
+      = gal_data_alloc (gaussian, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+                        minmapsize, 1, NULL, NULL, NULL);
+
+  gal_data_t *gaussian_waves = gal_wavelet_no_decimate (
+      gaussian_noise, planes, numthreads, minmapsize);
+  gal_data_free (gaussian_noise);
+
+  // Noise 0 estimation
+  double *imagew = residue->array;
+  double *noise0
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "noise0");
+  for (size_t i = 0; i < size; i++)
+    {
+      noise0[i] = sqrt (abs (imagew[i] + sigma * sigma));
+    }
+
+  // Noise Factor
+  gal_data_t *p = gaussian_waves;
+  gal_data_t *noise = NULL;
+  for (size_t plane = 0; plane < planes; plane++)
+    {
+      double noiseFactor = gsl_stats_sd_m (p->array, 1, size, 0.0)
+                           / DECONVOLVE_NOISE_LEVEL_ADJUST;
+      printf ("NOISE FACTOR IS %f \n", noiseFactor);
+      p = p->next;
+      double *noise_array = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
+                                                  __func__, "noise0");
+      for (size_t i = 0; i < size; i++)
+        {
+          noise_array[i] = noise0[i] * noiseFactor;
+        }
+      gal_data_t *new_noise
+          = gal_data_alloc (noise_array, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+                            minmapsize, 1, NULL, NULL, NULL);
+      gal_list_data_add (&noise, new_noise);
+    }
+  gal_list_data_reverse (&noise);
+  gal_list_data_free (gaussian_waves);
+  return noise;
+}
+
+gal_data_t *
+gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
+                      size_t iterations, size_t waves, double tolerance,
+                      double alpha, size_t minmapsize, size_t numthreads)
+{
+  /* Check image type. */
+  if (image->type != GAL_TYPE_FLOAT32)
+    error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
+  return NULL;
 }
