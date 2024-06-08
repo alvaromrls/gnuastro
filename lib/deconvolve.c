@@ -634,5 +634,24 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
   /* Check image type. */
   if (image->type != GAL_TYPE_FLOAT32)
     error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
+  size_t size = image->size;
+  size_t *dsize = image->dsize;
+
+  /* Prepare the PSF in freq domain*/
+  double *psf_padding
+      = gal_wavelet_add_padding (PSF->array, PSF->dsize, dsize);
+  gsl_complex_packed_array psf_complex
+      = gal_complex_real_to_complex (psf_complex, size);
+  gal_fft_shift_center (psf_complex, dsize);
+  gsl_complex_packed_array fft_psf = gal_fft_two_dimension_transformation (
+      psf_complex, dsize, numthreads, minmapsize, gsl_fft_forward);
+  free (psf_complex);
+  gsl_complex_packed_array fft_psf_conj
+      = gal_complex_conjugate (fft_psf, size);
+
+  /* Decompose the image into wavelets*/
+  gal_data_t *imagewaves
+      = gal_wavelet_no_decimate (image, waves, numthreads, minmapsize);
+
   return NULL;
 }
