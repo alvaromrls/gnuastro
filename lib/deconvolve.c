@@ -32,6 +32,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/deconvolve.h>
 #include <gnuastro/fft.h>
 #include <gnuastro/pointer.h>
+#include <gnuastro/wavelet.h>
 
 double *deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
                                      double sigma, double *likehood);
@@ -308,12 +309,9 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
 
   /* Calculate  PSF*(u,v) */
   psffconj = gal_complex_conjugate (psffreq, size);
-  printf ("Cumulative sum from og image is \t %f \n",
-          gal_complex_cumulative_sum (imagepadding, size));
+
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
-      printf ("Cumulative sum at iteration %d is \t %f \n", iteration,
-              gal_complex_cumulative_sum (object, size));
       deconvolve_richardson_lucy_calculate_next_solution (
           &object, psffreq, psffconj, imagepadding, alpha, dsize, minmapsize,
           numthreads);
@@ -452,4 +450,92 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
         }
     }
   return output;
+}
+
+#define DECONVOLVE_MASK_FACTOR 1.5
+
+gal_data_t *
+deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
+                               gal_data_t *noise, size_t ampl,
+                               size_t numthreads, size_t minmapsize)
+{
+  size_t size = wavelet->size;
+  size_t sizex = wavelet->dsize[0];
+  size_t sizey = wavelet->dsize[1];
+  size_t ampl2 = ampl * ampl;
+  size_t dsize_ampl[] = { ampl, ampl };
+
+  double *window0
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, ampl2, 1, __func__, "window");
+  for (size_t i = 0; i < ampl2; i++)
+    {
+      window0[i] = 1.0 / ((double)ampl2);
+    }
+
+  // Convert window to frequency domain
+  double *window
+      = gal_wavelet_add_padding (window0, dsize_ampl, wavelet->dsize);
+  free (window0);
+  gsl_complex_packed_array windowc
+      = gal_complex_real_to_complex (window, size);
+  free (window);
+  gal_fft_shift_center (windowc, wavelet->dsize);
+  gsl_complex_packed_array fft_window = gal_fft_two_dimension_transformation (
+      windowc, size, numthreads, minmapsize, gsl_fft_forward);
+  free (windowc);
+
+  // Calculate and transform square error to wavelet and projection
+  gsl_complex_packed_array waveletc
+      = gal_complex_real_to_complex (wavelet->array, size);
+  gsl_complex_packed_array projectionc
+      = gal_complex_real_to_complex (projection->array, size);
+
+  gsl_complex_packed_array error
+      = gal_complex_substract (waveletc, projectionc, size);
+  free (waveletc);
+  free (projectionc);
+
+  gsl_complex_packed_array error_square = gal_complex_power (error, 2, size);
+  free (error);
+
+  gsl_complex_packed_array fft_errorsq = gal_fft_two_dimension_transformation (
+      error_square, size, numthreads, minmapsize, gsl_fft_forward);
+  free (error_square);
+
+  // Calculate mask
+  gsl_complex_packed_array convolution_freq
+      = gal_complex_multiply (fft_errorsq, fft_window, size);
+  free (fft_errorsq);
+  free (fft_window);
+
+  gsl_complex_packed_array convolutionc
+      = gal_fft_two_dimension_transformation (
+          convolution_freq, size, numthreads, minmapsize, gsl_fft_backward);
+  free (convolution_freq);
+
+  double *convolution
+      = gal_complex_to_real (convolutionc, size, COMPLEX_TO_REAL_REAL);
+  free (convolutionc);
+
+  double *aux
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "aux");
+  for (size_t i = 0; i < size; i++)
+    {
+      aux[i] = sqrt (convolution[i]);
+    }
+  free (convolution);
+
+  double *mask
+      = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "mask");
+  double *noisearray = noise->array;
+  for (size_t i = 0; i < size; i++)
+    {
+      double a = DECONVOLVE_MASK_FACTOR * (aux[i] - noisearray[i]);
+      mask[i]
+          = 1.0
+            - exp ((-1.0) * (a * a) / (2.0 * noisearray[i] * noisearray[i]));
+      // todo: check low values ?
+    }
+  free (aux);
+  return mask;
 }

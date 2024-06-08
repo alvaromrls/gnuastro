@@ -128,6 +128,33 @@ gal_complex_multiply (gsl_complex_packed_array first,
 }
 
 /**
+ * @brief Perform an element-wise substraction of two complex arrays.
+ *
+ * @param first first element in the substraction
+ * @param second second element in the substraction
+ * @param size total number of element in the array.
+ * @return gsl_complex_packed_array  a pointer to the new data
+ */
+gsl_complex_packed_array
+gal_complex_substract (gsl_complex_packed_array first,
+                       gsl_complex_packed_array second, size_t size)
+{
+  gsl_complex_packed_array out;
+
+  /* Allocate the space for the output array. */
+  out = gal_pointer_allocate (GAL_TYPE_COMPLEX64, size, 1, __func__,
+                              "product");
+
+  /* Iterate over the arrays: substract the elements */
+  for (size_t index = 0; index < size; index++)
+    {
+      out[index * 2] = first[index * 2] - second[index * 2];
+      out[index * 2 + 1] = first[index * 2 + 1] - second[index * 2 + 1];
+    }
+  return out;
+}
+
+/**
  * @brief Function to multiply each element by a given double value (inplace)
  *
  * @param inout array to apply the function
