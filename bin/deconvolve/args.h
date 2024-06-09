@@ -45,6 +45,17 @@ struct argp_option program_options[] = {
   { "alpha", UI_KEY_APLHA, "DOUBLE", 0, "Deconvolve: Alha (rate)",
     GAL_OPTIONS_GROUP_INPUT, &p->alpha, GAL_TYPE_FLOAT64,
     GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_NOT_MANDATORY, GAL_OPTIONS_NOT_SET },
+  { "waves", UI_KEY_WAVES, "INT", 0,
+    "Deconvolve: Number of wavelets for AWMLE", GAL_OPTIONS_GROUP_INPUT,
+    &p->waves, GAL_TYPE_SIZE_T, GAL_OPTIONS_RANGE_GT_0,
+    GAL_OPTIONS_NOT_MANDATORY, GAL_OPTIONS_NOT_SET },
+  { "tolerance", UI_KEY_TOLERANCE, "DOUBLE", 0,
+    "Deconvolve: Tolerance for AWMLE", GAL_OPTIONS_GROUP_INPUT, &p->tolerance,
+    GAL_TYPE_FLOAT64, GAL_OPTIONS_RANGE_GT_0, GAL_OPTIONS_NOT_MANDATORY,
+    GAL_OPTIONS_NOT_SET },
+  { "sigma", UI_KEY_SIGMA, "DOUBLE", 0, "Deconvolve: sigma (AWMLE)",
+    GAL_OPTIONS_GROUP_INPUT, &p->sigma, GAL_TYPE_FLOAT64,
+    GAL_OPTIONS_RANGE_ANY, GAL_OPTIONS_NOT_MANDATORY, GAL_OPTIONS_NOT_SET },
   { 0 }
 };
 

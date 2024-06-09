@@ -213,6 +213,10 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
     {
       p->algorithm = DECONVOLUTION_ALGORITHM_RL;
     }
+  else if (!strcmp (AWMLE_NAME, p->algorithmstr))
+    {
+      p->algorithm = DECONVOLUTION_ALGORITHM_AWMLE;
+    }
   else
     {
       error (EXIT_FAILURE, 0,

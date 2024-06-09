@@ -27,13 +27,13 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro-internal/options.h>
 
 #define TIKHONOV_NAME "tikhonov"
-#define WEINER_NAME "weiner" 
+#define WEINER_NAME "weiner"
 #define RICHADSON_LUCY_NAME "richardson-lucy"
 #define AWMLE_NAME "awmle"
 
 /* Available letters for short options:
 
-   b c d e f g j l n p r s t v w x y z
+   b c d e f g j l n p r s v x y z
    B C E G H J Q R W X Y
 */
 enum option_keys_enum
@@ -46,7 +46,10 @@ enum option_keys_enum
   UI_KEY_LAMBDA = 'L',
   UI_KEY_ALGORITHM = 'A',
   UI_KEY_ITERATIONS = 'i',
-  UI_KEY_APLHA = 'a'
+  UI_KEY_APLHA = 'a',
+  UI_KEY_WAVES = 'w',
+  UI_KEY_TOLERANCE = 't',
+  UI_KEY_SIGMA = 's'
   /* Only with long version (start with a value 1000, the rest will be set
      automatically). */
 };

@@ -57,7 +57,9 @@ struct deconvolve_params
   double lambda;      /*Lambda value for Tikhonov algorithm      */
   size_t numberofitr; /*Number of iterations for RL (default 75)*/
   double alpha;       /* Rate for RL (default 1) */
-
+  size_t waves;       /*AWMLE*/
+  double tolerance;   /*AWMLE*/
+  double sigma;       /*AWMLE*/
   /* Internal */
   int isfits;   /* Input is a FITS file.                   */
   int hdu_type; /* Type of HDU (image or table).           */

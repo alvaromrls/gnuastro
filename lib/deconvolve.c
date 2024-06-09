@@ -629,7 +629,8 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
 gal_data_t *
 gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                       size_t iterations, size_t waves, double tolerance,
-                      double alpha, size_t minmapsize, size_t numthreads)
+                      double sigma, double alpha, size_t minmapsize,
+                      size_t numthreads)
 {
   /* Check image type. */
   if (image->type != GAL_TYPE_FLOAT32)

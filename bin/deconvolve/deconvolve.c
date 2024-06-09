@@ -58,6 +58,15 @@ deconvolve (struct deconvolve_params *p)
           p->input, p->kernel, p->numberofitr, p->alpha, p->cp.minmapsize,
           p->cp.numthreads);
       break;
+    case DECONVOLUTION_ALGORITHM_AWMLE:
+      printf ("Executing AWMLE algorithm with alpha = %f, waves = "
+              "%zu, tolerance = %f, sigma = %f and %zu "
+              "iterations\n",
+              p->alpha, p->waves, p->tolerance, p->sigma, p->numberofitr);
+      data = gal_deconvolve_AWMLE (p->input, p->kernel, p->numberofitr,
+                                   p->waves, p->tolerance, p->sigma, p->alpha,
+                                   p->cp.minmapsize, p->cp.numthreads);
+      break;
     default:
       error (EXIT_FAILURE, 0, "Not implemented algorithm");
       break;
