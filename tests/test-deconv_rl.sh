@@ -71,7 +71,8 @@
 # space characters in them, quote the full value
 numjobs=8
 builddir=build
-outdir=/home/alvaro/Development/saturnoAWMLE
+outdir=/home/alvaro/deconvolutiontest/richardsonlucy/saturno_extra_noise2
+
 
 
 
@@ -89,7 +90,7 @@ outdir=/home/alvaro/Development/saturnoAWMLE
 # that will delete that particular program.
 utilname=deconvolve
 arguments=saturno_psf_noise.fits
-options="--kernel=tess-psf1.fits -A awmle --khdu=0 --hdu=0 -o awmle1.fits -i 1  --sigma=1e-7"
+options="--kernel=tess-psf1.fits -A richardson-lucy --khdu=0 --hdu=0 -a 0.3"
 
 
 
@@ -206,9 +207,14 @@ if make -j$numjobs -C "$builddir"; then
         cp "$srcdir"/bin/*/*.conf .gnuastro/
     fi
 
-    # Run the built utility with the given arguments and options.
-    "$utility" $arguments $options $extraopts
+values=(200)
+# values=(1 5 10 20 40 60 80 100 120 140 160 180 200 220 240)
+# values=(1 )
 
+    # Run the built utility with the given arguments and options.
+    for L in "${values[@]}"; do
+    "$utility" $arguments $options -i $L -o ${L}_iteration.fits $extraopts
+done
     # Clean up.
     rm -rf .gnuastro
 fi

@@ -39,8 +39,20 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_statistics_double.h>
 
-double *deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
-                                     double sigma, double *likehood);
+void deconvolve_AWMLE_update_object (double *correctionterm,
+                                     gal_data_t *modified_image_res,
+                                     gal_data_t *projection,
+                                     gsl_complex_packed_array psf_fft_conj,
+                                     double *object, double alpha,
+                                     size_t numthreads, size_t minmapsize);
+
+gal_data_t *deconvolve_estimate_p_prime (gal_data_t *image,
+                                         gal_data_t *projection, double sigma,
+                                         double *likehood, size_t minmapsize);
+
+void deconvolve_AWMLE_increment_correction_term (
+    double *correctionterm_A, gal_data_t *projection_wave, gal_data_t *mask,
+    gal_data_t *modifiedimage_wave, gal_data_t *projection);
 
 gal_data_t *deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet,
                                            gal_data_t *projection,
@@ -220,7 +232,7 @@ deconvolve_richardson_lucy_init_solution (size_t size)
 
   for (size_t index = 0; index < size; index++)
     {
-      out[index * 2] = 1;
+      out[index * 2] = DBL_MIN;
     }
   return out;
 }
@@ -346,14 +358,16 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
 
 #define DECONVOLVE_SIGMA_MIN 1.0e-6
 
-double *
+gal_data_t *
 deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
-                             double sigma, double *likehood)
+                             double sigma, double *likehood, size_t minmapsize)
 {
 
-  // check image is d64
+  // check image is F64
+  if (image->type != GAL_TYPE_FLOAT64)
+    error (EXIT_FAILURE, 0, "%s: input data must be float 64", __func__);
 
-  double size = image->size;
+  size_t size = image->size;
   double *output
       = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1, __func__, "pprime");
   double *imagearray = image->array;
@@ -371,7 +385,7 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
   if (sigma < DECONVOLVE_SIGMA_MIN)
     // Sigma so small we can consider poisson noise
     {
-      mempcpy (output, image->array, sizeof (double) * size);
+      memcpy (output, imagearray, sizeof (double) * size);
       for (size_t i = 0; i < size; i++)
         {
           if (imagearray[i] != 0.0)
@@ -459,7 +473,8 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
           (*likehood) += new;
         }
     }
-  return output;
+  return gal_data_alloc (output, GAL_TYPE_FLOAT64, 2, image->dsize, NULL, 1,
+                         minmapsize, 1, NULL, NULL, NULL);
 }
 
 #define DECONVOLVE_MASK_FACTOR 1.5
@@ -544,7 +559,16 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
       mask[i]
           = 1.0
             - exp ((-1.0) * (a * a) / (2.0 * noisearray[i] * noisearray[i]));
-      // todo: check low values ?
+
+      // Safety check!
+      if (mask[i] > 1.0)
+        {
+          mask[i] = 1.0;
+        }
+      if ((mask[i] == NAN) || (mask[i] <= DBL_MIN))
+        {
+          mask[i] = DBL_MIN;
+        }
     }
   free (aux);
   return gal_data_alloc (mask, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1, minmapsize,
@@ -637,22 +661,224 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
     error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
   size_t size = image->size;
   size_t *dsize = image->dsize;
+  gal_data_t *image64 = gal_data_copy_to_new_type (image, GAL_TYPE_FLOAT64);
+
+  if (PSF == NULL)
+    error (EXIT_FAILURE, 0, "%s: Error loading PSF fits file", __func__);
+
+  gal_data_t *psf64 = gal_data_copy_to_new_type (PSF, GAL_TYPE_FLOAT64);
 
   /* Prepare the PSF in freq domain*/
   double *psf_padding
-      = gal_wavelet_add_padding (PSF->array, PSF->dsize, dsize);
+      = gal_wavelet_add_padding (psf64->array, PSF->dsize, dsize);
   gsl_complex_packed_array psf_complex
-      = gal_complex_real_to_complex (psf_complex, size);
+      = gal_complex_real_to_complex (psf_padding, size);
+  free (psf_padding);
+
   gal_fft_shift_center (psf_complex, dsize);
-  gsl_complex_packed_array fft_psf = gal_fft_two_dimension_transformation (
+  gal_complex_normalize (psf_complex, size);
+
+  gsl_complex_packed_array psf_fft = gal_fft_two_dimension_transformation (
       psf_complex, dsize, numthreads, minmapsize, gsl_fft_forward);
   free (psf_complex);
-  gsl_complex_packed_array fft_psf_conj
-      = gal_complex_conjugate (fft_psf, size);
+  gsl_complex_packed_array psf_fft_conj
+      = gal_complex_conjugate (psf_fft, size);
+
+  if (true)
+    {
+      double *psf_fft_toprint
+          = gal_complex_to_real (psf_fft, size, COMPLEX_TO_REAL_REAL);
+      gal_data_t *aawe
+          = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize, NULL,
+                            1, minmapsize, 1, NULL, NULL, NULL);
+      gal_fits_img_write (
+          aawe, "/home/alvaro/Development/saturnoAWMLE/out/psf_fft.fits", NULL,
+          0);
+    }
+
+  printf ("MIN PRECISION IS %f!! \n", DBL_MIN);
 
   /* Decompose the image into wavelets*/
   gal_data_t *imagewaves
       = gal_wavelet_no_decimate (image, waves, numthreads, minmapsize);
 
-  return NULL;
+  gal_data_t *imageres = gal_list_data_last (imagewaves);
+
+  /* Get noise factor */
+  gal_data_t *noise = deconvolve_calcule_AWMLE_noise_factor (
+      waves, dsize, imageres, sigma, minmapsize, numthreads);
+
+  double fx_new = DBL_MAX;
+  // energy ?
+
+  gsl_complex_packed_array object_c
+      = deconvolve_richardson_lucy_init_solution (size);
+  double *object = gal_complex_to_real (object_c, size, COMPLEX_TO_REAL_REAL);
+
+  double likehood;
+  for (size_t iteration = 0; iteration < iterations; iteration++)
+    {
+      printf ("Iteration number :%zu\n", iteration);
+      double *correctionterm = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
+                                                     __func__, "correction");
+
+      gsl_complex_packed_array object_fft
+          = gal_fft_two_dimension_transformation (object_c, dsize, numthreads,
+                                                  minmapsize, gsl_fft_forward);
+
+      if (true)
+        {
+          double *psf_fft_toprint
+              = gal_complex_to_real (object_fft, size, COMPLEX_TO_REAL_REAL);
+          gal_data_t *aawe
+              = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize,
+                                NULL, 1, minmapsize, 1, NULL, NULL, NULL);
+          gal_fits_img_write (
+              aawe,
+              "/home/alvaro/Development/saturnoAWMLE/out/object_fft.fits",
+              NULL, 0);
+        }
+
+      gsl_complex_packed_array projection_fft
+          = gal_complex_multiply (object_fft, psf_fft, size);
+      free (object_fft);
+
+      gsl_complex_packed_array projection_c
+          = gal_fft_two_dimension_transformation (
+              projection_fft, dsize, numthreads, minmapsize, gsl_fft_backward);
+      free (projection_fft);
+
+      double *projection
+          = gal_complex_to_real (projection_c, size, COMPLEX_TO_REAL_REAL);
+
+      for (size_t i = 0; i < size; i++)
+        {
+          if (projection[i] < DBL_MIN)
+            {
+              projection[i] = DBL_MIN;
+            }
+        }
+
+      gal_data_t *projection_gal
+          = gal_data_alloc (projection, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+                            minmapsize, 1, NULL, NULL, NULL);
+      free (projection_c);
+
+      gal_fits_img_write (
+          projection_gal,
+          "/home/alvaro/Development/saturnoAWMLE/out/projection.fits", NULL,
+          0);
+
+      gal_data_t *modifiedimage = deconvolve_estimate_p_prime (
+          image64, projection_gal, sigma, &likehood, minmapsize);
+
+      /* Decompose in wavelets */
+      gal_data_t *modifiedimage_wavelet = gal_wavelet_no_decimate (
+          modifiedimage, waves, numthreads, minmapsize);
+      gal_data_t *projection_wavelet = gal_wavelet_no_decimate (
+          projection_gal, waves, numthreads, minmapsize);
+
+      /* For each wavelet */
+      gal_data_t *imagewaves_p = imagewaves;
+      gal_data_t *noise_p = noise;
+      gal_data_t *projection_p = projection_wavelet;
+      gal_data_t *modifiedimage_p = modifiedimage_wavelet;
+      for (size_t wave = 0; wave < waves; wave++)
+        {
+          printf ("WAVE NUMBER: %zu\n", wave);
+          uint ampl = 2 * ((uint)pow (2, wave) + 1) + 1;
+          gal_data_t *mask = deconvolve_calcule_AWMLE_mask (
+              imagewaves_p, projection_p, noise_p, ampl, numthreads,
+              minmapsize);
+
+          deconvolve_AWMLE_increment_correction_term (
+              correctionterm, projection_p, mask, modifiedimage_p,
+              projection_gal);
+
+          /* Increment wavelet pointers*/
+          imagewaves_p = imagewaves_p->next;
+          noise_p = noise_p->next;
+          projection_p = projection_p->next;
+          modifiedimage_p = modifiedimage_p->next;
+        }
+
+      deconvolve_AWMLE_update_object (correctionterm, modifiedimage_p,
+                                      projection_gal, psf_fft_conj, object,
+                                      alpha, numthreads, minmapsize);
+
+      free (correctionterm);
+      gal_list_data_free (projection_wavelet);
+      gal_list_data_free (modifiedimage_wavelet);
+    }
+
+  return gal_data_alloc (object, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
+                         minmapsize, 1, NULL, NULL, NULL);
+}
+
+void
+deconvolve_AWMLE_update_object (double *correctionterm,
+                                gal_data_t *modified_image_res,
+                                gal_data_t *projection,
+                                gsl_complex_packed_array psf_fft_conj,
+                                double *object, double alpha,
+                                size_t numthreads, size_t minmapsize)
+{
+  printf ("Updating object \n");
+  size_t size = projection->size;
+  size_t *dsize = projection->dsize;
+  double *projection_array = projection->array;
+  double *res_array = modified_image_res->array;
+
+  /*Update correction term with the residue*/
+  for (size_t i = 0; i < size; i++)
+    {
+      correctionterm[i] += res_array[i] / projection_array[i];
+      // printf ("Correction term at %zu is %f\n", i, correctionterm[i]);
+    }
+
+  /* Calculate new object (in fft space)*/
+  printf ("new object in fft\n");
+  gsl_complex_packed_array correction_complex
+      = gal_complex_real_to_complex (correctionterm, size);
+  gsl_complex_packed_array correction_fft
+      = gal_fft_two_dimension_transformation (
+          correction_complex, dsize, numthreads, minmapsize, gsl_fft_forward);
+  free (correction_complex);
+
+  gsl_complex_packed_array new_object_fft
+      = gal_complex_multiply (correction_fft, psf_fft_conj, size);
+  free (correction_fft);
+
+  gsl_complex_packed_array new_object_c
+      = gal_fft_two_dimension_transformation (
+          new_object_fft, dsize, numthreads, minmapsize, gsl_fft_backward);
+  free (new_object_fft);
+
+  double *new_object
+      = gal_complex_to_real (new_object_fft, size, COMPLEX_TO_REAL_REAL);
+
+  /* Update object */
+  for (size_t i = 0; i < size; i++)
+    {
+      object[i] *= pow (new_object[i], alpha);
+    }
+}
+
+void
+deconvolve_AWMLE_increment_correction_term (double *correctionterm,
+                                            gal_data_t *projection_wave,
+                                            gal_data_t *mask,
+                                            gal_data_t *modifiedimage_wave,
+                                            gal_data_t *projection)
+{
+  size_t size = projection_wave->size;
+  double *pw_array = projection_wave->array;
+  double *mask_array = mask->array;
+  double *mi_array = modifiedimage_wave->array;
+  double *projection_array = projection->array;
+  for (size_t i = 0; i < size; i++)
+    {
+      double aux = (mi_array[i] - pw_array[i]) * mask_array[i];
+      correctionterm[i] += (pw_array[i] + aux) / projection_array[i];
+    }
 }
