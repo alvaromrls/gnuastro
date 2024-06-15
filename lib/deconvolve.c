@@ -567,9 +567,9 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
         {
           mask[i] = 1.0;
         }
-      if (isnan (mask[i]) || (mask[i] <= DBL_MIN))
+      if (isnan (mask[i]) || (mask[i] <= DBL_EPSILON))
         {
-          mask[i] = DBL_MIN;
+          mask[i] = DBL_EPSILON;
         }
     }
   free (aux);
@@ -647,7 +647,8 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
                             minmapsize, 1, NULL, NULL, NULL);
       gal_fits_img_write (
           new_noise,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/noise.fits", NULL, 0);
+          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/noise.fits",
+          NULL, 0);
       gal_list_data_add (&noise, new_noise);
     }
   gal_list_data_reverse (&noise);
@@ -698,11 +699,12 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize, NULL,
                             1, minmapsize, 1, NULL, NULL, NULL);
       gal_fits_img_write (
-          aawe, "/home/alvaro/TFM/Development/saturnoAWMLE/out/psf_fft.fits",
+          aawe,
+          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/psf_fft.fits",
           NULL, 0);
     }
 
-  printf ("MIN PRECISION IS %f!! \n", DBL_MIN);
+  printf ("MIN PRECISION IS %f!! \n", DBL_EPSILON);
 
   /* Decompose the image into wavelets*/
   gal_data_t *imagewaves
@@ -739,7 +741,8 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
               = gal_data_alloc (object, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
                                 minmapsize, 1, NULL, NULL, NULL);
           gal_fits_img_write (
-              u, "/home/alvaro/TFM/Development/saturnoAWMLE/out/object.fits",
+              u,
+              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/object.fits",
               NULL, 0);
         }
 
@@ -758,10 +761,10 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           gal_data_t *aawe
               = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize,
                                 NULL, 1, minmapsize, 1, NULL, NULL, NULL);
-          gal_fits_img_write (
-              aawe,
-              "/home/alvaro/TFM/Development/saturnoAWMLE/out/object_fft.fits",
-              NULL, 0);
+          gal_fits_img_write (aawe,
+                              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/"
+                              "out/object_fft.fits",
+                              NULL, 0);
         }
 
       gsl_complex_packed_array projection_fft
@@ -778,9 +781,9 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
 
       for (size_t i = 0; i < size; i++)
         {
-          if (projection[i] < DBL_MIN)
+          if (projection[i] < DBL_EPSILON)
             {
-              projection[i] = DBL_MIN;
+              projection[i] = DBL_EPSILON;
             }
         }
 
@@ -791,7 +794,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
 
       gal_fits_img_write (
           projection_gal,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/projection.fits",
+          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/projection.fits",
           NULL, 0);
 
       gal_data_t *modifiedimage = deconvolve_estimate_p_prime (
@@ -799,8 +802,8 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
 
       gal_fits_img_write (
           modifiedimage,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/p_prime.fits", NULL,
-          0);
+          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/p_prime.fits",
+          NULL, 0);
       printf ("Likehood is %f\n", likehood);
 
       /* Decompose in wavelets */
@@ -823,13 +826,15 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
               minmapsize);
 
           gal_fits_img_write (
-              mask, "/home/alvaro/TFM/Development/saturnoAWMLE/out/mask.fits",
+              mask,
+              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/mask.fits",
               NULL, 0);
 
-          gal_fits_img_write (projection_p,
-                              "/home/alvaro/TFM/Development/saturnoAWMLE/out/"
-                              "projection_w.fits",
-                              NULL, 0);
+          gal_fits_img_write (
+              projection_p,
+              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
+              "projection_w.fits",
+              NULL, 0);
 
           deconvolve_AWMLE_increment_correction_term (
               correctionterm, projection_p, mask, modifiedimage_p,
@@ -874,13 +879,13 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
   /*Update correction term with the residue*/
   for (size_t i = 0; i < size; i++)
     {
-      if (projection_array[i] > DBL_MIN)
+      if (projection_array[i] > DBL_EPSILON)
         {
           correctionterm[i] += res_array[i] / projection_array[i];
           // printf ("Correction term at %zu is %f\n", i, correctionterm[i]);
           if (isnan (correctionterm[i]) || isinf (correctionterm[i]))
             {
-              correctionterm[i] = DBL_MIN;
+              correctionterm[i] = DBL_EPSILON;
             }
         }
     }
@@ -890,10 +895,10 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
       gal_data_t *aawe
           = gal_data_alloc (correctionterm, GAL_TYPE_FLOAT64, 2, dsize, NULL,
                             1, minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/correction_term.fits",
-          NULL, 0);
+      gal_fits_img_write (aawe,
+                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
+                          "correction_term.fits",
+                          NULL, 0);
     }
 
   /* Calculate new object (in fft space)*/
@@ -912,10 +917,10 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
       gal_data_t *aawe
           = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize, NULL,
                             1, minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/psf_fft_conj.fits",
-          NULL, 0);
+      gal_fits_img_write (aawe,
+                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
+                          "psf_fft_conj.fits",
+                          NULL, 0);
     }
 
   gsl_complex_packed_array new_object_fft
@@ -939,7 +944,7 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                             minmapsize, 1, NULL, NULL, NULL);
       gal_fits_img_write (
           aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/new_object.fits",
+          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/new_object.fits",
           NULL, 0);
     }
 
@@ -947,9 +952,10 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
   for (size_t i = 0; i < size; i++)
     {
       object[i] *= (pow (new_object[i], alpha));
-      if ((object[i] < DBL_MIN) || (isnan (object[i])) || (isinf (object[i])))
+      if ((object[i] < DBL_EPSILON) || (isnan (object[i]))
+          || (isinf (object[i])))
         {
-          object[i] = DBL_MIN;
+          object[i] = DBL_EPSILON;
         }
       if (object[i] > DBL_MAX)
         {
@@ -979,7 +985,7 @@ deconvolve_AWMLE_increment_correction_term (double *correctionterm,
   double *projection_array = projection->array;
   for (size_t i = 0; i < size; i++)
     {
-      if (projection_array[i] > DBL_MIN)
+      if (projection_array[i] > DBL_EPSILON)
         {
           double aux = (mi_array[i] - pw_array[i]) * mask_array[i];
           double aux2 = (pw_array[i] + aux) / projection_array[i];
@@ -996,9 +1002,9 @@ deconvolve_AWMLE_increment_correction_term (double *correctionterm,
       gal_data_t *aawe = gal_data_alloc (correctionterm, GAL_TYPE_FLOAT64, 2,
                                          projection_wave->dsize, NULL, 1,
                                          _minmap, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLE/out/correction_term.fits",
-          NULL, 0);
+      gal_fits_img_write (aawe,
+                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
+                          "correction_term.fits",
+                          NULL, 0);
     }
 }
