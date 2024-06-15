@@ -72,6 +72,8 @@ deconvolve (struct deconvolve_params *p)
       break;
     }
 
-  gal_fits_img_write (data, p->cp.output, NULL, 0); // output option
+  gal_data_t *original_type = gal_data_copy_to_new_type (data, p->input->type);
+  gal_fits_img_write (original_type, p->cp.output, NULL, 0); // output option
   free (data);
+  free (original_type);
 }
