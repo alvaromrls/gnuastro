@@ -471,8 +471,13 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
               new = -lc - hh + log (serieantden) + p *lh - l2 - p *lp + p
                     + lhp;
             }
-          output[i] = serieantnum / serieantden;
-          (*likehood) += new;
+          double new_output = serieantnum / serieantden;
+          if (!isnan (new_output) && !isinf (new_output) && !isnan (new)
+              && !isinf (new))
+            {
+              output[i] = new_output;
+              (*likehood) += new;
+            }
         }
     }
   return gal_data_alloc (output, GAL_TYPE_FLOAT64, 2, image->dsize, NULL, 1,
@@ -902,7 +907,6 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
     }
 
   /* Calculate new object (in fft space)*/
-  printf ("new object in fft\n");
   gsl_complex_packed_array correction_complex
       = gal_complex_real_to_complex (correctionterm, size);
   gsl_complex_packed_array correction_fft
