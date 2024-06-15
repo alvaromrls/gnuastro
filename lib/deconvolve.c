@@ -40,7 +40,10 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_statistics_double.h>
 
-size_t _minmap = 0;
+#define DECONVOLVE_AWMLE_MASK_FACTOR 1.5
+#define DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST 1.0
+#define DECONVOLVE_AWMLE_SIGMA_MIN 1.0e-6
+
 void deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                                      gal_data_t *modified_image_res,
                                      gal_data_t *projection,
@@ -48,9 +51,15 @@ void deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                                      double *object, double alpha,
                                      size_t numthreads, size_t minmapsize);
 
-gal_data_t *deconvolve_estimate_p_prime (gal_data_t *image,
-                                         gal_data_t *projection, double sigma,
-                                         double *likehood, size_t minmapsize);
+gal_data_t *deconvolve_AWMLE_estimate_p_prime (gal_data_t *image,
+                                               gal_data_t *projection,
+                                               double sigma, double *likehood,
+                                               size_t minmapsize);
+
+gal_data_t *
+deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
+                                       gal_data_t *residue, double sigma,
+                                       size_t minmapsize, size_t numthreads);
 
 void deconvolve_AWMLE_increment_correction_term (
     double *correctionterm_A, gal_data_t *projection_wave, gal_data_t *mask,
@@ -358,14 +367,24 @@ gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
   return data;
 }
 
-#define DECONVOLVE_SIGMA_MIN 1.0e-6
-
+/**
+ * @brief Subfunction to estimate p prime in AWMLE. Only for internal use.
+ *
+ * @param image The image to estimate p prime. Must be float 64.
+ * @param projection The image projection in the psf (convolution).
+ * @param sigma The gaussian noise estimation. If < DECONVOLVE_AWMLE_SIGMA_MIN,
+ * only poisson noise will be considered.
+ * @param likehood Output parameter, value used to early stop the algorithm.
+ * @param minmapsize
+ * @return gal_data_t* The p prime estimation
+ */
 gal_data_t *
-deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
-                             double sigma, double *likehood, size_t minmapsize)
+deconvolve_AWMLE_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
+                                   double sigma, double *likehood,
+                                   size_t minmapsize)
 {
 
-  // check image is F64
+  /*Check image is F64*/
   if (image->type != GAL_TYPE_FLOAT64)
     error (EXIT_FAILURE, 0, "%s: input data must be float 64", __func__);
 
@@ -376,6 +395,7 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
   double *projectionarray = projection->array;
   *likehood = 0.0;
 
+  /* Low level values */
   double v = sigma;
   double vv = sigma * sigma;
   double vv2 = 2. * vv;
@@ -384,7 +404,7 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
   double lc = log (sqrt (M_PI * 2 * v));
   double max = 2.5 * v;
 
-  if (sigma < DECONVOLVE_SIGMA_MIN)
+  if (sigma < DECONVOLVE_AWMLE_SIGMA_MIN)
     // Sigma so small we can consider poisson noise
     {
       memcpy (output, imagearray, sizeof (double) * size);
@@ -484,9 +504,17 @@ deconvolve_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
                          minmapsize, 1, NULL, NULL, NULL);
 }
 
-#define DECONVOLVE_MASK_FACTOR 1.5
-#define DECONVOLVE_NOISE_LEVEL_ADJUST 1.0
-
+/**
+ * @brief Subfunction to calculate the stadistical mask (mj).
+ *
+ * @param wavelet The wavelet image.
+ * @param projection The projection in that plane.
+ * @param noise The noise factor in that wavelet plane.
+ * @param ampl The size of the window.
+ * @param numthreads
+ * @param minmapsize
+ * @return gal_data_t* The stadistical mask. Must be in range [0,1].
+ */
 gal_data_t *
 deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
                                gal_data_t *noise, size_t ampl,
@@ -562,7 +590,7 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
   double *noisearray = noise->array;
   for (size_t i = 0; i < size; i++)
     {
-      double a = DECONVOLVE_MASK_FACTOR * (aux[i] - noisearray[i]);
+      double a = DECONVOLVE_AWMLE_MASK_FACTOR * (aux[i] - noisearray[i]);
       mask[i]
           = 1.0
             - exp ((-1.0) * (a * a) / (2.0 * noisearray[i] * noisearray[i]));
@@ -583,12 +611,14 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
 }
 
 /**
- * @brief
+ * @brief Subfunction to calculate the noise factor. Only for interal use.
  *
- * @param planes
- * @param sizex
- * @param sizey
- * @return gal_data_t*
+ * @param planes Number of planes in the algorithm.
+ * @param dsize Dimensions [x,y].
+ * @param residue The residual from the image wavelet descomposition.
+ * @param sigma Gaussian noise estimation.
+ * @param minmapsize
+ * @param numthreads
  */
 gal_data_t *
 deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
@@ -638,11 +668,11 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
   for (size_t plane = 0; plane < planes; plane++)
     {
       double noiseFactor = gsl_stats_sd_m (p->array, 1, size, 0.0)
-                           / DECONVOLVE_NOISE_LEVEL_ADJUST;
+                           / DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST;
       printf ("NOISE FACTOR IS %f \n", noiseFactor);
       p = p->next;
       double *noise_array = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
-                                                  __func__, "noise0");
+                                                  __func__, "noise");
       for (size_t i = 0; i < size; i++)
         {
           noise_array[i] = noise0[i] * noiseFactor;
@@ -658,6 +688,7 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
     }
   gal_list_data_reverse (&noise);
   gal_list_data_free (gaussian_waves);
+  free (noise0);
   return noise;
 }
 
@@ -667,7 +698,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                       double sigma, double alpha, size_t minmapsize,
                       size_t numthreads)
 {
-  _minmap = minmapsize;
   /* Check image type. */
   if (image->type != GAL_TYPE_FLOAT32)
     error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
@@ -802,7 +832,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/projection.fits",
           NULL, 0);
 
-      gal_data_t *modifiedimage = deconvolve_estimate_p_prime (
+      gal_data_t *modifiedimage = deconvolve_AWMLE_estimate_p_prime (
           image64, projection_gal, sigma, &likehood, minmapsize);
 
       gal_fits_img_write (
@@ -868,6 +898,22 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                          minmapsize, 1, NULL, NULL, NULL);
 }
 
+/**
+ * @brief Subfunction to update the object at the end of each iteration.
+ * 1st it updates the correction term based on the residue from pprime.
+ * Then it updates the object.
+ * Last, it adjust the energy in the object.
+ *
+ * @param correctionterm
+ * @param energy The original energy value (sum of all elements).
+ * @param modified_image_res Pprime residue.
+ * @param projection
+ * @param psf_fft_conj psf conjugate.
+ * @param object The current image reconstruction (in/out parameter).
+ * @param alpha The growing factor
+ * @param numthreads
+ * @param minmapsize
+ */
 void
 deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                                 gal_data_t *modified_image_res,
@@ -973,8 +1019,19 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
     {
       object[i] *= energy / newenergy;
     }
+  free (new_object);
 }
 
+/**
+ * @brief Subfunction to update the correction term. Only for
+ * internal use.
+ *
+ * @param correctionterm In/out parameter.
+ * @param projection_wave The projection in a specific wave.
+ * @param mask The statistical mask in a specific wave.
+ * @param modifiedimage_wave Pprime in a specific wave.
+ * @param projection The object and psf convolution.
+ */
 void
 deconvolve_AWMLE_increment_correction_term (double *correctionterm,
                                             gal_data_t *projection_wave,
@@ -993,22 +1050,10 @@ deconvolve_AWMLE_increment_correction_term (double *correctionterm,
         {
           double aux = (mi_array[i] - pw_array[i]) * mask_array[i];
           double aux2 = (pw_array[i] + aux) / projection_array[i];
-          // if (aux2 < 0)
-          //   aux2 = 0;
           if (!isnan (aux2) || !isinf (aux2))
             {
               correctionterm[i] += aux2;
             }
         }
-    }
-  if (true)
-    {
-      gal_data_t *aawe = gal_data_alloc (correctionterm, GAL_TYPE_FLOAT64, 2,
-                                         projection_wave->dsize, NULL, 1,
-                                         _minmap, 1, NULL, NULL, NULL);
-      gal_fits_img_write (aawe,
-                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
-                          "correction_term.fits",
-                          NULL, 0);
     }
 }
