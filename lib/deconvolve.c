@@ -698,17 +698,34 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                       double sigma, double alpha, size_t minmapsize,
                       size_t numthreads)
 {
-  /* Check image type. */
-  if (image->type != GAL_TYPE_FLOAT32)
-    error (EXIT_FAILURE, 0, "%s: input data must be float 32", __func__);
   size_t size = image->size;
   size_t *dsize = image->dsize;
-  gal_data_t *image64 = gal_data_copy_to_new_type (image, GAL_TYPE_FLOAT64);
+
+  /* Check and adapt data types */
+  gal_data_t *image64;
+  if (image->type == GAL_TYPE_FLOAT64)
+    {
+      image64 = gal_data_copy (image);
+    }
+  else
+    {
+      image64 = gal_data_copy_to_new_type (image, GAL_TYPE_FLOAT64);
+    }
 
   if (PSF == NULL)
-    error (EXIT_FAILURE, 0, "%s: Error loading PSF fits file", __func__);
+    {
+      error (EXIT_FAILURE, 0, "%s: Error loading PSF fits file", __func__);
+    }
 
-  gal_data_t *psf64 = gal_data_copy_to_new_type (PSF, GAL_TYPE_FLOAT64);
+  gal_data_t *psf64;
+  if (PSF->type == GAL_TYPE_FLOAT64)
+    {
+      psf64 = gal_data_copy (PSF);
+    }
+  else
+    {
+      psf64 = gal_data_copy_to_new_type (PSF, GAL_TYPE_FLOAT64);
+    }
 
   /* Prepare the PSF in freq domain*/
   double *psf_padding
@@ -739,8 +756,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           NULL, 0);
     }
 
-  printf ("MIN PRECISION IS %f!! \n", DBL_EPSILON);
-
   /* Decompose the image into wavelets*/
   gal_data_t *imagewaves
       = gal_wavelet_no_decimate (image, waves, numthreads, minmapsize);
@@ -754,8 +769,10 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
   double fx_new = DBL_MAX;
   // energy ?
 
+  /* Initialize data*/
   gsl_complex_packed_array object_c
       = deconvolve_richardson_lucy_init_solution (size);
+  double *object = gal_complex_to_real (object_c, size, COMPLEX_TO_REAL_REAL);
 
   double energy = 0;
   double *image_array = image64->array;
@@ -763,9 +780,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
     {
       energy += image_array[i];
     }
-
   printf ("Initial energy is %f\n", energy);
-  double *object = gal_complex_to_real (object_c, size, COMPLEX_TO_REAL_REAL);
 
   double likehood;
   for (size_t iteration = 0; iteration < iterations; iteration++)
@@ -814,6 +829,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
       double *projection
           = gal_complex_to_real (projection_c, size, COMPLEX_TO_REAL_REAL);
 
+      /* Secury check */
       for (size_t i = 0; i < size; i++)
         {
           if (projection[i] < DBL_EPSILON)
@@ -880,6 +896,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           noise_p = noise_p->next;
           projection_p = projection_p->next;
           modifiedimage_p = modifiedimage_p->next;
+          gal_data_free (mask);
         }
 
       deconvolve_AWMLE_update_object (correctionterm, energy, modifiedimage_p,
@@ -893,6 +910,14 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
       gal_list_data_free (projection_wavelet);
       gal_list_data_free (modifiedimage_wavelet);
     }
+
+  free (object_c);
+  free (psf_fft);
+  free (psf_fft_conj);
+  gal_data_free (image64);
+  gal_data_free (psf64);
+  gal_list_data_free (imagewaves);
+  gal_list_data_free (noise);
 
   return gal_data_alloc (object, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
                          minmapsize, 1, NULL, NULL, NULL);
