@@ -166,7 +166,7 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
 }
 
 /**
- * @brief Implements a deconvolution using the weiner method:
+ * @brief Implements a deconvolution using the direct inversion method:
  * O(u,v) = I(u,v)/PSF(u,v)
  *
  * @param image
@@ -175,8 +175,9 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
  * @param minmapsize
  */
 gal_data_t *
-gal_deconvolve_weiner (const gal_data_t *image, const gal_data_t *PSF,
-                       size_t numthreads, size_t minmapsize)
+gal_deconvolve_direct_inversion (const gal_data_t *image,
+                                 const gal_data_t *PSF, size_t numthreads,
+                                 size_t minmapsize)
 {
   gsl_complex_packed_array imagepadding;      // original image after padding
   gsl_complex_packed_array psfpadding;        // kernel after padding

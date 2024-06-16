@@ -40,10 +40,10 @@ deconvolve (struct deconvolve_params *p)
 
   switch (p->algorithm)
     {
-    case DECONVOLUTION_ALGORITHM_WEINER:
-      printf ("Executing weiner algorithm \n");
-      data = gal_deconvolve_weiner (p->input, p->kernel, p->cp.numthreads,
-                                    p->cp.minmapsize);
+    case DECONVOLUTION_ALGORITHM_DIRECT_INVERSION:
+      printf ("Executing direct inversion algorithm \n");
+      data = gal_deconvolve_direct_inversion (
+          p->input, p->kernel, p->cp.numthreads, p->cp.minmapsize);
       break;
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
       printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);

@@ -205,9 +205,9 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
         }
     }
 
-  else if (!strcmp (WEINER_NAME, p->algorithmstr))
+  else if (!strcmp (DIRECT_INVERSION_NAME, p->algorithmstr))
     {
-      p->algorithm = DECONVOLUTION_ALGORITHM_WEINER;
+      p->algorithm = DECONVOLUTION_ALGORITHM_DIRECT_INVERSION;
     }
   else if (!strcmp (RICHADSON_LUCY_NAME, p->algorithmstr))
     {
@@ -222,7 +222,8 @@ ui_check_options_and_arguments (struct deconvolve_params *p)
       error (EXIT_FAILURE, 0,
              "deconvolve algorithm not recognised (%s), "
              "please use a valid one: \n -%s \n -%s \n -%s\n",
-             p->algorithmstr, TIKHONOV_NAME, WEINER_NAME, RICHADSON_LUCY_NAME);
+             p->algorithmstr, TIKHONOV_NAME, DIRECT_INVERSION_NAME,
+             RICHADSON_LUCY_NAME);
     }
 }
 

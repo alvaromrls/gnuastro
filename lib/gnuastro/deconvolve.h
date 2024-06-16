@@ -31,9 +31,10 @@ gal_data_t *gal_deconvolve_tikhonov (const gal_data_t *image,
                                      const gal_data_t *PSF, double lambda,
                                      size_t numthreads, size_t minmapsize);
 
-gal_data_t *gal_deconvolve_weiner (const gal_data_t *image,
-                                   const gal_data_t *PSF, size_t numthreads,
-                                   size_t minmapsize);
+gal_data_t *gal_deconvolve_direct_inversion (const gal_data_t *image,
+                                             const gal_data_t *PSF,
+                                             size_t numthreads,
+                                             size_t minmapsize);
 
 gal_data_t *gal_deconvolve_richardson_lucy (const gal_data_t *image,
                                             const gal_data_t *PSF,
