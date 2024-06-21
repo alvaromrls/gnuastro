@@ -784,6 +784,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
   printf ("Initial energy is %f\n", energy);
 
   double likehood;
+  double last_likehood = DBL_EPSILON;
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
       if (true)
@@ -857,6 +858,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/p_prime.fits",
           NULL, 0);
       printf ("Likehood is %f\n", likehood);
+      printf ("LAST Likehood is %f\n", last_likehood);
 
       /* Decompose in wavelets */
       gal_data_t *modifiedimage_wavelet = gal_wavelet_no_decimate (
@@ -910,6 +912,28 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
       free (correctionterm);
       gal_list_data_free (projection_wavelet);
       gal_list_data_free (modifiedimage_wavelet);
+
+      if (iteration == 0)
+        {
+          last_likehood = likehood;
+        }
+      else
+        {
+          double diff_likehood = likehood - last_likehood;
+          double median_likehood = (last_likehood + likehood) / 2.0;
+          double test_value = fabs (diff_likehood / median_likehood);
+          printf ("Tests value is %f \n", test_value);
+          if (test_value <= tolerance)
+            {
+              printf ("-----Early stop at %zu -----\n", iteration);
+              iteration = iterations;
+              last_likehood = likehood;
+            }
+          else
+            {
+              last_likehood = likehood;
+            }
+        }
     }
 
   free (object_c);
