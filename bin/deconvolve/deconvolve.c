@@ -38,36 +38,52 @@ deconvolve (struct deconvolve_params *p)
 {
   gal_data_t *data = NULL;
   size_t awmle_iterations = 0;
+  uint8_t quiet = p->cp.quiet;
+  printf ("Quiet mode is %d\n", quiet);
   switch (p->algorithm)
     {
     case DECONVOLUTION_ALGORITHM_DIRECT_INVERSION:
-      printf ("Executing direct inversion algorithm \n");
+      if (quiet == 0)
+        {
+          printf ("Executing direct inversion algorithm \n");
+        }
       data = gal_deconvolve_direct_inversion (
           p->input, p->kernel, p->cp.numthreads, p->cp.minmapsize);
       break;
     case DECONVOLUTION_ALGORITHM_TIKHONOV:
-      printf ("Executing tikhonov algorithm with lambda = %f \n", p->lambda);
+      if (quiet == 0)
+        {
+          printf ("Executing tikhonov algorithm with lambda = %f \n",
+                  p->lambda);
+        }
       data = gal_deconvolve_tikhonov (p->input, p->kernel, p->lambda,
                                       p->cp.numthreads, p->cp.minmapsize);
       break;
     case DECONVOLUTION_ALGORITHM_RL:
-      printf ("Executing richardson-lucy algorithm with alpha = %f and %zu "
+      if (quiet == 0)
+        {
+          printf (
+              "Executing richardson-lucy algorithm with alpha = %f and %zu "
               "iterations\n",
               p->alpha, p->numberofitr);
+        }
       data = gal_deconvolve_richardson_lucy (
           p->input, p->kernel, p->numberofitr, p->alpha, p->cp.minmapsize,
           p->cp.numthreads);
       break;
     case DECONVOLUTION_ALGORITHM_AWMLE:
-      printf ("Executing AWMLE algorithm with alpha = %f, waves = "
-              "%zu, tolerance = %f, sigma = %f and %zu "
-              "iterations\n",
-              p->alpha, p->waves, p->tolerance, p->sigma, p->numberofitr);
+      if (quiet == 0)
+        {
+          printf ("Executing AWMLE algorithm with alpha = %f, waves = "
+                  "%zu, tolerance = %f, sigma = %f and %zu "
+                  "iterations\n",
+                  p->alpha, p->waves, p->tolerance, p->sigma, p->numberofitr);
+        }
       data = gal_deconvolve_AWMLE (p->input, p->kernel, p->numberofitr,
                                    p->waves, p->tolerance, p->sigma, p->alpha,
                                    p->cp.minmapsize, p->cp.numthreads,
                                    &awmle_iterations);
-      if (awmle_iterations > 0)
+      if ((awmle_iterations > 0) && (quiet == 0))
         {
           printf ("-----Early stop at %zu -----\n", awmle_iterations);
         }
