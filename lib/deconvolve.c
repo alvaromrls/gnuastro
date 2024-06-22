@@ -44,6 +44,11 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #define DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST 1.0
 #define DECONVOLVE_AWMLE_SIGMA_MIN 1.0e-6
 
+gal_data_t *
+deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
+                                       gal_data_t *residue, double sigma,
+                                       size_t minmapsize, size_t numthreads);
+
 void deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                                      gal_data_t *modified_image_res,
                                      gal_data_t *projection,
@@ -697,11 +702,11 @@ gal_data_t *
 gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                       size_t iterations, size_t waves, double tolerance,
                       double sigma, double alpha, size_t minmapsize,
-                      size_t numthreads)
+                      size_t numthreads, size_t *early)
 {
   size_t size = image->size;
   size_t *dsize = image->dsize;
-
+  *early = 0;
   /* Check and adapt data types */
   gal_data_t *image64;
   if (image->type == GAL_TYPE_FLOAT64)
@@ -925,9 +930,8 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           printf ("Tests value is %f \n", test_value);
           if (test_value <= tolerance)
             {
-              printf ("-----Early stop at %zu -----\n", iteration);
+              *early = iteration;
               iteration = iterations;
-              last_likehood = likehood;
             }
           else
             {

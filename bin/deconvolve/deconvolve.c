@@ -37,7 +37,7 @@ void
 deconvolve (struct deconvolve_params *p)
 {
   gal_data_t *data = NULL;
-
+  size_t awmle_iterations = 0;
   switch (p->algorithm)
     {
     case DECONVOLUTION_ALGORITHM_DIRECT_INVERSION:
@@ -65,7 +65,12 @@ deconvolve (struct deconvolve_params *p)
               p->alpha, p->waves, p->tolerance, p->sigma, p->numberofitr);
       data = gal_deconvolve_AWMLE (p->input, p->kernel, p->numberofitr,
                                    p->waves, p->tolerance, p->sigma, p->alpha,
-                                   p->cp.minmapsize, p->cp.numthreads);
+                                   p->cp.minmapsize, p->cp.numthreads,
+                                   &awmle_iterations);
+      if (awmle_iterations > 0)
+        {
+          printf ("-----Early stop at %zu -----\n", awmle_iterations);
+        }
       break;
     default:
       error (EXIT_FAILURE, 0, "Not implemented algorithm");
