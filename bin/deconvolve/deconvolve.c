@@ -39,7 +39,6 @@ deconvolve (struct deconvolve_params *p)
   gal_data_t *data = NULL;
   size_t awmle_iterations = 0;
   uint8_t quiet = p->cp.quiet;
-  printf ("Quiet mode is %d\n", quiet);
   switch (p->algorithm)
     {
     case DECONVOLUTION_ALGORITHM_DIRECT_INVERSION:

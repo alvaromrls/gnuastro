@@ -675,7 +675,6 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
     {
       double noiseFactor = gsl_stats_sd_m (p->array, 1, size, 0.0)
                            / DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST;
-      printf ("NOISE FACTOR IS %f \n", noiseFactor);
       p = p->next;
       double *noise_array = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
                                                   __func__, "noise");
@@ -686,10 +685,6 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
       gal_data_t *new_noise
           = gal_data_alloc (noise_array, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
                             minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          new_noise,
-          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/noise.fits",
-          NULL, 0);
       gal_list_data_add (&noise, new_noise);
     }
   gal_list_data_reverse (&noise);
@@ -749,19 +744,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
   gsl_complex_packed_array psf_fft_conj
       = gal_complex_conjugate (psf_fft, size);
 
-  if (true)
-    {
-      double *psf_fft_toprint
-          = gal_complex_to_real (psf_fft, size, COMPLEX_TO_REAL_REAL);
-      gal_data_t *aawe
-          = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize, NULL,
-                            1, minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/psf_fft.fits",
-          NULL, 0);
-    }
-
   /* Decompose the image into wavelets*/
   gal_data_t *imagewaves
       = gal_wavelet_no_decimate (image, waves, numthreads, minmapsize);
@@ -786,7 +768,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
     {
       energy += image_array[i];
     }
-  printf ("Initial energy is %f\n", energy);
 
   double likehood;
   double last_likehood = DBL_EPSILON;
@@ -803,26 +784,12 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
               NULL, 0);
         }
 
-      printf ("Iteration number :%zu\n", iteration);
       double *correctionterm = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
                                                      __func__, "correction");
 
       gsl_complex_packed_array object_fft
           = gal_fft_two_dimension_transformation (object_c, dsize, numthreads,
                                                   minmapsize, gsl_fft_forward);
-
-      if (true)
-        {
-          double *psf_fft_toprint
-              = gal_complex_to_real (object_fft, size, COMPLEX_TO_REAL_REAL);
-          gal_data_t *aawe
-              = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize,
-                                NULL, 1, minmapsize, 1, NULL, NULL, NULL);
-          gal_fits_img_write (aawe,
-                              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/"
-                              "out/object_fft.fits",
-                              NULL, 0);
-        }
 
       gsl_complex_packed_array projection_fft
           = gal_complex_multiply (object_fft, psf_fft, size);
@@ -850,20 +817,8 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                             minmapsize, 1, NULL, NULL, NULL);
       free (projection_c);
 
-      gal_fits_img_write (
-          projection_gal,
-          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/projection.fits",
-          NULL, 0);
-
       gal_data_t *modifiedimage = deconvolve_AWMLE_estimate_p_prime (
           image64, projection_gal, sigma, &likehood, minmapsize);
-
-      gal_fits_img_write (
-          modifiedimage,
-          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/p_prime.fits",
-          NULL, 0);
-      printf ("Likehood is %f\n", likehood);
-      printf ("LAST Likehood is %f\n", last_likehood);
 
       /* Decompose in wavelets */
       gal_data_t *modifiedimage_wavelet = gal_wavelet_no_decimate (
@@ -883,17 +838,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
           gal_data_t *mask = deconvolve_calcule_AWMLE_mask (
               imagewaves_p, projection_p, noise_p, ampl, numthreads,
               minmapsize);
-
-          gal_fits_img_write (
-              mask,
-              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/mask.fits",
-              NULL, 0);
-
-          gal_fits_img_write (
-              projection_p,
-              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
-              "projection_w.fits",
-              NULL, 0);
 
           deconvolve_AWMLE_increment_correction_term (
               correctionterm, projection_p, mask, modifiedimage_p,
@@ -926,9 +870,7 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
         {
           double diff_likehood = likehood - last_likehood;
           double median_likehood = (last_likehood + likehood) / 2.0;
-          double test_value = fabs (diff_likehood / median_likehood);
-          printf ("Tests value is %f \n", test_value);
-          if (test_value <= tolerance)
+          if (fabs (diff_likehood / median_likehood) <= tolerance)
             {
               *early = iteration;
               iteration = iterations;
@@ -995,17 +937,6 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
         }
     }
 
-  if (true)
-    {
-      gal_data_t *aawe
-          = gal_data_alloc (correctionterm, GAL_TYPE_FLOAT64, 2, dsize, NULL,
-                            1, minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (aawe,
-                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
-                          "correction_term.fits",
-                          NULL, 0);
-    }
-
   /* Calculate new object (in fft space)*/
   gsl_complex_packed_array correction_complex
       = gal_complex_real_to_complex (correctionterm, size);
@@ -1013,19 +944,6 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
       = gal_fft_two_dimension_transformation (
           correction_complex, dsize, numthreads, minmapsize, gsl_fft_forward);
   free (correction_complex);
-
-  if (true)
-    {
-      double *psf_fft_toprint
-          = gal_complex_to_real (psf_fft_conj, size, COMPLEX_TO_REAL_REAL);
-      gal_data_t *aawe
-          = gal_data_alloc (psf_fft_toprint, GAL_TYPE_FLOAT64, 2, dsize, NULL,
-                            1, minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (aawe,
-                          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/"
-                          "psf_fft_conj.fits",
-                          NULL, 0);
-    }
 
   gsl_complex_packed_array new_object_fft
       = gal_complex_multiply (correction_fft, psf_fft_conj, size);
@@ -1040,17 +958,6 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
   double *new_object
       = gal_complex_to_real (new_object_c, size, COMPLEX_TO_REAL_REAL);
   free (new_object_c);
-
-  if (true)
-    {
-      gal_data_t *aawe
-          = gal_data_alloc (new_object, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
-                            minmapsize, 1, NULL, NULL, NULL);
-      gal_fits_img_write (
-          aawe,
-          "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/new_object.fits",
-          NULL, 0);
-    }
 
   /* Update object */
   for (size_t i = 0; i < size; i++)
@@ -1068,7 +975,6 @@ deconvolve_AWMLE_update_object (double *correctionterm, double energy,
 
       newenergy += object[i];
     }
-  printf ("New energy is %f \n", newenergy);
   for (size_t i = 0; i < size; i++)
     {
       object[i] *= energy / newenergy;
