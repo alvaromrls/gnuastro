@@ -40,6 +40,10 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gnuastro/warp.h>
 #include <gnuastro/wavelet.h>
 
+/*****************************************************************/
+/**************    Father function defines    ********************/
+/*****************************************************************/
+
 #define B3_SPLINE_SIZE 5
 #define B3_SPLINE_1ST_ROW                                                     \
   {                                                                           \
@@ -61,6 +65,14 @@ gal_data_t *wavelet_expand_father_function (gal_data_t *father, size_t factor,
 
 gal_data_t *wavelet_init_father_function (size_t minmapsize);
 
+/**
+ * @brief Substract two double arrays. Needed for rest calculation.
+ *
+ * @param first array
+ * @param second array
+ * @param size number of elements
+ * @return double* new array with the diff.
+ */
 double *
 wavelet_substract (double *first, double *second, size_t size)
 {
@@ -73,6 +85,12 @@ wavelet_substract (double *first, double *second, size_t size)
   return out;
 }
 
+/**
+ * @brief Generates the first father function
+ *
+ * @param minmapsize
+ * @return gal_data_t* father function (5x5)
+ */
 gal_data_t *
 wavelet_init_father_function (size_t minmapsize)
 {
@@ -96,7 +114,15 @@ wavelet_init_father_function (size_t minmapsize)
                          minmapsize, 1, NULL, NULL, NULL);
   return data;
 }
-
+/**
+ * @brief Given a father function, this function scales it by a factor. Uses a
+ * 2D interpolation.
+ *
+ * @param father The father function to be scaled.
+ * @param factor The scale factor.
+ * @param minmapsize
+ * @return gal_data_t* A bigger father function.
+ */
 gal_data_t *
 wavelet_expand_father_function (gal_data_t *father, size_t factor,
                                 size_t minmapsize)
@@ -113,13 +139,13 @@ wavelet_expand_father_function (gal_data_t *father, size_t factor,
       xgrid[i] = (double)(i * (dsize[0] - 1)) / (double)(father->dsize[0] - 1);
       ygrid[i] = (double)(i * (dsize[1] - 1)) / (double)(father->dsize[1] - 1);
     }
-  // Inicializar el interpolador 2D
+  // Init 2D interp
   gsl_interp2d *interp = gsl_interp2d_alloc (
       gsl_interp2d_bilinear, father->dsize[0], father->dsize[1]);
   gsl_interp2d_init (interp, xgrid, ygrid, fatherp, father->dsize[0],
                      father->dsize[1]);
 
-  // Inicializar los aceleradores
+  // Init accel
   gsl_interp_accel *x_acc = gsl_interp_accel_alloc ();
   gsl_interp_accel *y_acc = gsl_interp_accel_alloc ();
 
@@ -127,22 +153,33 @@ wavelet_expand_father_function (gal_data_t *father, size_t factor,
     {
       for (size_t x = 0; x < dsize[0]; x++)
         {
-          // Coordenadas donde queremos interpolar
+          // Target coordinates
           double xi = (double)x;
           double yi = (double)y;
-          // Realizar la interpolación
+          // Interpolate
           double zi = gsl_interp2d_eval (interp, xgrid, ygrid, fatherp, xi, yi,
                                          x_acc, y_acc);
           nextfather[x + y * dsize[1]] = zi;
         }
     }
-  // Liberar memoria
+  // Free resources
   gsl_interp2d_free (interp);
   gsl_interp_accel_free (x_acc);
   gsl_interp_accel_free (y_acc);
   return gal_data_alloc (nextfather, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
                          minmapsize, 1, NULL, NULL, NULL);
 }
+
+/**
+ * @brief Apply a wavelet decomposition to a given imagen. Uses no decimate
+ * algorithm.
+ *
+ * @param image to be decomposed.
+ * @param numberplanes
+ * @param numthreads for FFT transformations.
+ * @param minmapsize
+ * @return gal_data_t* numberplanes+1 images. Use ->next to navigate.
+ */
 gal_data_t *
 gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
                          size_t numthreads, size_t minmapsize)
@@ -226,6 +263,15 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
   return out;
 }
 
+/**
+ * @brief Generate 0's around an image until it fixes a desired size.
+ *
+ * @param input image.
+ * @param inputsize original size [X,Y].
+ * @param outputsize desired size [X,y].
+ * @return double* new array with input in the middle and outputsize
+ * dimensions.
+ */
 double *
 gal_wavelet_add_padding (double *input, size_t *inputsize, size_t *outputsize)
 {
@@ -270,6 +316,11 @@ gal_wavelet_add_padding (double *input, size_t *inputsize, size_t *outputsize)
   return out;
 }
 
+/**
+ * @brief Free wavelet resources.
+ *
+ * @param wavelet
+ */
 void
 gal_wavelet_free (gal_data_t *wavelet)
 {
