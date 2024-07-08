@@ -82,6 +82,13 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
   return out;
 }
 
+/**
+ * @brief Converts from double to complex (only copying real part).
+ *
+ * @param realarray
+ * @param size
+ * @return gsl_complex_packed_array
+ */
 gsl_complex_packed_array
 gal_complex_real_to_complex (double *realarray, size_t size)
 {
