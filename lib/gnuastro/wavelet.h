@@ -37,11 +37,6 @@ gal_data_t *gal_wavelet_no_decimate (const gal_data_t *image,
                                      uint8_t numberplanes, size_t numthreads,
                                      size_t minmapsize);
 
-gal_data_t *wavelet_expand_father_function (gal_data_t *father, size_t factor,
-                                            size_t minmapsize);
-
-gal_data_t *wavelet_init_father_function (size_t minmapsize);
-
 void gal_wavelet_free (gal_data_t *wavelet);
 
 double *gal_wavelet_add_padding (double *input, size_t *inputsize,

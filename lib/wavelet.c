@@ -53,7 +53,14 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
   {                                                                           \
     6.0, 24.0, 36.0, 24.0, 6.0                                                \
   }
+
 double *wavelet_substract (double *first, double *second, size_t size);
+
+gal_data_t *wavelet_expand_father_function (gal_data_t *father, size_t factor,
+                                            size_t minmapsize);
+
+gal_data_t *wavelet_init_father_function (size_t minmapsize);
+
 double *
 wavelet_substract (double *first, double *second, size_t size)
 {
