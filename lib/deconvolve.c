@@ -40,6 +40,7 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_statistics_double.h>
 
+// AWMLE defines
 #define DECONVOLVE_AWMLE_MASK_FACTOR 1.5
 #define DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST 1.0
 #define DECONVOLVE_AWMLE_SIGMA_MIN 1.0e-6
@@ -78,6 +79,7 @@ void deconvolve_richardson_lucy_calculate_next_solution (
 
 gsl_complex_packed_array
 deconvolve_richardson_lucy_init_solution (size_t size);
+
 /**
  * @brief Implement a deconvolution using the Wiener / Tikhonov method
  * described at https://ui.adsabs.harvard.edu/abs/2002PASP..114.1051S/abstract
@@ -233,6 +235,12 @@ gal_deconvolve_direct_inversion (const gal_data_t *image,
   return data;
 }
 
+/**
+ * @brief Inits an array with 1's as first solution for iterative methods.
+ *
+ * @param size number of elements
+ * @return gsl_complex_packed_array
+ */
 gsl_complex_packed_array
 deconvolve_richardson_lucy_init_solution (size_t size)
 {
@@ -249,6 +257,18 @@ deconvolve_richardson_lucy_init_solution (size_t size)
   return out;
 }
 
+/**
+ * @brief Performs one iteration in Richardson-Lucy algorithm.
+ *
+ * @param solution last iteration image and next image (in-out)
+ * @param h PSF (fft domain)
+ * @param h_f PSF* (fft domain)
+ * @param image original image
+ * @param alpha growth factor
+ * @param dsize dimensions
+ * @param minmapsize
+ * @param numthreads
+ */
 void
 deconvolve_richardson_lucy_calculate_next_solution (
     gsl_complex_packed_array *solution, gsl_complex_packed_array h,
@@ -307,6 +327,17 @@ deconvolve_richardson_lucy_calculate_next_solution (
   *solution = next_solution;
 }
 
+/**
+ * @brief Perform a deconvolution with Richardson-Lucy algorithm.
+ *
+ * @param image To be deconvolved.
+ * @param PSF Kernel used to take the image.
+ * @param iterations number of iterations.
+ * @param alpha growth factor.
+ * @param minmapsize
+ * @param numthreads
+ * @return gal_data_t* deconvolved image.
+ */
 gal_data_t *
 gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
                                 size_t iterations, double alpha,
@@ -688,6 +719,21 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
   return noise;
 }
 
+/**
+ * @brief Perform a deconvolution with Richardson-Lucy algorithm.ç
+ *
+ * @param image To be deconvolved.
+ * @param PSF Kernel used to take the image.
+ * @param iterations number of iterations.
+ * @param waves number of planes in wavelet decomposition.
+ * @param tolerance to perform an early stop.
+ * @param sigma std of gaussian noise.
+ * @param alpha growth factor.
+ * @param minmapsize
+ * @param numthreads
+ * @param early out parameter, if > 0 shows last iteration.
+ * @return gal_data_t* deconvolved image.
+ */
 gal_data_t *
 gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
                       size_t iterations, size_t waves, double tolerance,
