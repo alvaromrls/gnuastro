@@ -44,11 +44,6 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 #define DECONVOLVE_AWMLE_NOISE_LEVEL_ADJUST 1.0
 #define DECONVOLVE_AWMLE_SIGMA_MIN 1.0e-6
 
-gal_data_t *
-deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
-                                       gal_data_t *residue, double sigma,
-                                       size_t minmapsize, size_t numthreads);
-
 void deconvolve_AWMLE_update_object (double *correctionterm, double energy,
                                      gal_data_t *modified_image_res,
                                      gal_data_t *projection,
