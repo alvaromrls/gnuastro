@@ -814,17 +814,6 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
   double last_likehood = DBL_EPSILON;
   for (size_t iteration = 0; iteration < iterations; iteration++)
     {
-      if (true)
-        {
-          gal_data_t *u
-              = gal_data_alloc (object, GAL_TYPE_FLOAT64, 2, dsize, NULL, 1,
-                                minmapsize, 1, NULL, NULL, NULL);
-          gal_fits_img_write (
-              u,
-              "/home/alvaro/TFM/Development/saturnoAWMLEnoise/out/object.fits",
-              NULL, 0);
-        }
-
       double *correctionterm = gal_pointer_allocate (GAL_TYPE_FLOAT64, size, 1,
                                                      __func__, "correction");
 
