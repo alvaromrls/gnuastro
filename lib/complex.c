@@ -31,10 +31,10 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief Function to convert a complex number array into a real number array.
  *
- * @param complexarray the array to be converted
- * @param size total number of element in the array
- * @param action how to convert the complex numbers
- * @return double*  a pointer to the new data
+ * @param complexarray The complex array to be converted to real.
+ * @param size The number of elements in the array.
+ * @param action How to convert the complex numbers.
+ * @return double* A pointer to the new data.
  */
 double *
 gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
@@ -85,9 +85,9 @@ gal_complex_to_real (gsl_complex_packed_array complexarray, size_t size,
 /**
  * @brief Converts from double to complex (only copying real part).
  *
- * @param realarray
- * @param size
- * @return gsl_complex_packed_array
+ * @param realarray Real array to be converted to complex.
+ * @param size The number of elements in the array.
+ * @return gsl_complex_packed_array A pointer to the new data.
  */
 gsl_complex_packed_array
 gal_complex_real_to_complex (double *realarray, size_t size)
@@ -106,11 +106,12 @@ gal_complex_real_to_complex (double *realarray, size_t size)
 
 /**
  * @brief Perform an element-wise multiplication of two complex arrays.
+ * @note Both arrays are assumed to have the same dimensions.
  *
- * @param first first element in the multiplication
- * @param second second element in the multiplication
- * @param size total number of element in the array.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param first First element in the multiplication.
+ * @param second Second element in the multiplication.
+ * @param size The number of elements in the array.
+ * @return gsl_complex_packed_array A pointer to the new data.
  */
 gsl_complex_packed_array
 gal_complex_multiply (gsl_complex_packed_array first,
@@ -136,11 +137,12 @@ gal_complex_multiply (gsl_complex_packed_array first,
 
 /**
  * @brief Perform an element-wise substraction of two complex arrays.
+ * @note Both arrays are assumed to have the same dimensions.
  *
- * @param first first element in the substraction
+ * @param first First element in the substraction
  * @param second second element in the substraction
- * @param size total number of element in the array.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param size The number of elements in the array.
+ * @return gsl_complex_packed_array A pointer to the new data
  */
 gsl_complex_packed_array
 gal_complex_substract (gsl_complex_packed_array first,
@@ -162,11 +164,11 @@ gal_complex_substract (gsl_complex_packed_array first,
 }
 
 /**
- * @brief Function to multiply each element by a given double value (inplace)
+ * @brief Function to multiply each element by a given double value (inplace).
  *
- * @param inout array to apply the function
- * @param value to multiply the array
- * @param size total number of elements in the array.
+ * @param inout Array to be scaled.
+ * @param value The scale factor.
+ * @param size The number of elements in the array.
  */
 void
 gal_complex_scale (gsl_complex_packed_array inout, double value, size_t size)
@@ -180,12 +182,13 @@ gal_complex_scale (gsl_complex_packed_array inout, double value, size_t size)
 
 /**
  * @brief Perform an element-wise division of two complex arrays.
+ * @note Both arrays are assumed to have the same dimensions.
  *
- * @param first dividend.
- * @param second divisor.
- * @param size total number of elements in the array.
- * @param minValue if divisor is less than this value, the result will be 0.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param first Dividend array.
+ * @param second Divisor array.
+ * @param size The number of elements in the array.
+ * @param minValue If divisor is less than this value, the result will be 0.
+ * @return gsl_complex_packed_array A pointer to the new data
  */
 gsl_complex_packed_array
 gal_complex_divide (gsl_complex_packed_array first,
@@ -223,9 +226,9 @@ gal_complex_divide (gsl_complex_packed_array first,
  * @brief Calculate the conjugate of a given complex array.
  * Conjugate(a+bi) = a-bi.
  *
- * @param input the array to conjugate.
- * @param size total number of element in the array.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param input The array to conjugate.
+ * @param size The number of elements in the array.
+ * @return gsl_complex_packed_array A pointer to the new data
  */
 gsl_complex_packed_array
 gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
@@ -247,10 +250,10 @@ gal_complex_conjugate (gsl_const_complex_packed_array input, size_t size)
 /**
  * @brief Add a scalar number to each of the elements of a given complex array.
  *
- * @param input the input array.
- * @param size total number of element in the array.
- * @param scalar a complex number to add to each element.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param input The input array.
+ * @param size The number of elements in the array.
+ * @param scalar A complex number to add to each element.
+ * @return gsl_complex_packed_array A pointer to the new data
  */
 gsl_complex_packed_array
 gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
@@ -274,9 +277,12 @@ gal_complex_add_scalar (gsl_const_complex_packed_array input, size_t size,
  * @brief Function to generate a padding in the kernel (adapt the image if
  * needed) and converts them from real images to complex ones
  *
- * @param image
- * @param kernel
- * @param output
+ * @param image The base image.
+ * @param kernel The kernel to be scale to the base image dimensions.
+ * @param outputimage The base image in complex data.
+ * @param outputkernel The kernel in complex data with base image dimensions.
+ * @param xdim Base image X size if odd, Base image  X size - 1 if even.
+ * @param ydim Base image Y size if odd, Base image  Y size - 1 if even.
  */
 void
 gal_complex_create_padding (const gal_data_t *image, const gal_data_t *kernel,
@@ -354,10 +360,11 @@ gal_complex_create_padding (const gal_data_t *image, const gal_data_t *kernel,
 }
 
 /**
- * @brief Normalize an array (inplace)
+ * @brief Normalize an array to have a total sum of 1, this function works
+ * inplace.
  *
- * @param inout
- * @param size
+ * @param inout The array to be normalized.
+ * @param size The number of elements in the array.
  */
 void
 gal_complex_normalize (gsl_complex_packed_array inout, size_t size)
@@ -373,9 +380,9 @@ gal_complex_normalize (gsl_complex_packed_array inout, size_t size)
 /**
  * @brief Function to calculate cumulative sum of an array.
  *
- * @param input target array
- * @param size
- * @return double
+ * @param input The target array.
+ * @param size The number of elements in the array.
+ * @return double Cumulative sum.
  */
 double
 gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
@@ -394,8 +401,8 @@ gal_complex_cumulative_sum (gsl_complex_packed_array input, size_t size)
  *
  * @param input Input array to be raised.
  * @param exponent The exponent (real number).
- * @param size total number of element in the array.
- * @return gsl_complex_packed_array  a pointer to the new data
+ * @param size The number of elements in the array.
+ * @return gsl_complex_packed_array A pointer to the new data
  */
 gsl_complex_packed_array
 gal_complex_power (gsl_complex_packed_array input, double exponent,
