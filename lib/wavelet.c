@@ -44,6 +44,14 @@ along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
 /**************    Father function defines    ********************/
 /*****************************************************************/
 
+/****************** Final B3 SPLINE *******************
+                  1    4   6   4   1
+                  4   16  24  16   4
+                  6   24  36  24   6
+                  4   16  24  16   4
+                  1    4   6   4   1
+******************************************************/
+
 #define B3_SPLINE_SIZE 5
 #define B3_SPLINE_1ST_ROW                                                     \
   {                                                                           \
@@ -68,10 +76,10 @@ gal_data_t *wavelet_init_father_function (size_t minmapsize);
 /**
  * @brief Substract two double arrays. Needed for rest calculation.
  *
- * @param first array
- * @param second array
- * @param size number of elements
- * @return double* new array with the diff.
+ * @param first First array in the substraction.
+ * @param second Second array in the substraction.
+ * @param size  The number of elements in the array.
+ * @return double* New array with the difference.
  */
 double *
 wavelet_substract (double *first, double *second, size_t size)
@@ -86,7 +94,7 @@ wavelet_substract (double *first, double *second, size_t size)
 }
 
 /**
- * @brief Generates the first father function
+ * @brief Generates the first father function.
  *
  * @param minmapsize
  * @return gal_data_t* father function (5x5)
@@ -118,10 +126,10 @@ wavelet_init_father_function (size_t minmapsize)
  * @brief Given a father function, this function scales it by a factor. Uses a
  * 2D interpolation.
  *
- * @param father The father function to be scaled.
- * @param factor The scale factor.
+ * @param father The father function to be scaled [NxN].
+ * @param factor The scale factor (S).
  * @param minmapsize
- * @return gal_data_t* A bigger father function.
+ * @return gal_data_t* A father function in a bigger scale [N*SxN*S].
  */
 gal_data_t *
 wavelet_expand_father_function (gal_data_t *father, size_t factor,
@@ -174,11 +182,11 @@ wavelet_expand_father_function (gal_data_t *father, size_t factor,
  * @brief Apply a wavelet decomposition to a given imagen. Uses no decimate
  * algorithm.
  *
- * @param image to be decomposed.
- * @param numberplanes
- * @param numthreads for FFT transformations.
+ * @param image The image to be decomposed into wavelet planes.
+ * @param numberplanes The number of planes (N).
+ * @param numthreads Number fo threads for FFT transformations.
  * @param minmapsize
- * @return gal_data_t* numberplanes+1 images. Use ->next to navigate.
+ * @return gal_data_t* N+1 images. Use ->next to navigate.
  */
 gal_data_t *
 gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
@@ -266,10 +274,10 @@ gal_wavelet_no_decimate (const gal_data_t *image, uint8_t numberplanes,
 /**
  * @brief Generate 0's around an image until it fixes a desired size.
  *
- * @param input image.
- * @param inputsize original size [X,Y].
- * @param outputsize desired size [X,y].
- * @return double* new array with input in the middle and outputsize
+ * @param input The image to be filled.
+ * @param inputsize Original size [X,Y].
+ * @param outputsize Desired size [X,y].
+ * @return double* New array with input in the middle and outputsize
  * dimensions.
  */
 double *
@@ -319,7 +327,7 @@ gal_wavelet_add_padding (double *input, size_t *inputsize, size_t *outputsize)
 /**
  * @brief Free wavelet resources.
  *
- * @param wavelet
+ * @param wavelet A wavelet array to be cleaned.
  */
 void
 gal_wavelet_free (gal_data_t *wavelet)
