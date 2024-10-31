@@ -85,11 +85,12 @@ deconvolve_richardson_lucy_init_solution (size_t size);
  * described at https://ui.adsabs.harvard.edu/abs/2002PASP..114.1051S/abstract
  * (eq 7)
  *
- * @param image The image with distorsion and noise
- * @param PSF The distorsion kernel
- * @param lambda
- * @param numthreads Number of threads in FFT
- * @param output
+ * @param image The image to be deconvolved.
+ * @param PSF The distorsion kernel.
+ * @param lambda The Tikhonov main parameter.
+ * @param numthreads Number of threads in FFT.
+ * @param minmapsize
+ * @return gal_data_t* The image deconvolved.
  */
 gal_data_t *
 gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
@@ -171,10 +172,11 @@ gal_deconvolve_tikhonov (const gal_data_t *image, const gal_data_t *PSF,
  * @brief Implements a deconvolution using the direct inversion method:
  * O(u,v) = I(u,v)/PSF(u,v)
  *
- * @param image
- * @param PSF
- * @param numthreads
+ * @param image The image to be deconvolved.
+ * @param PSF The distorsion kernel.
+ * @param numthreads Number of threads in FFT.
  * @param minmapsize
+ * @return gal_data_t* The image deconvolved.
  */
 gal_data_t *
 gal_deconvolve_direct_inversion (const gal_data_t *image,
@@ -238,8 +240,8 @@ gal_deconvolve_direct_inversion (const gal_data_t *image,
 /**
  * @brief Inits an array with 1's as first solution for iterative methods.
  *
- * @param size number of elements
- * @return gsl_complex_packed_array
+ * @param size Number of elements in the generated array.
+ * @return gsl_complex_packed_array An array with 1's.
  */
 gsl_complex_packed_array
 deconvolve_richardson_lucy_init_solution (size_t size)
@@ -260,14 +262,14 @@ deconvolve_richardson_lucy_init_solution (size_t size)
 /**
  * @brief Performs one iteration in Richardson-Lucy algorithm.
  *
- * @param solution last iteration image and next image (in-out)
- * @param h PSF (fft domain)
- * @param h_f PSF* (fft domain)
- * @param image original image
- * @param alpha growth factor
- * @param dsize dimensions
+ * @param solution Last iteration image and next image (in-out)
+ * @param h The PSF in Fourier domain.
+ * @param h_f The PSF conjugated in Fourier domain.
+ * @param image The original image.
+ * @param alpha The growth factor.
+ * @param dsize 2D dimension size (X,Y).
  * @param minmapsize
- * @param numthreads
+ * @param numthreads Number of threads.
  */
 void
 deconvolve_richardson_lucy_calculate_next_solution (
@@ -330,13 +332,13 @@ deconvolve_richardson_lucy_calculate_next_solution (
 /**
  * @brief Perform a deconvolution with Richardson-Lucy algorithm.
  *
- * @param image To be deconvolved.
+ * @param image The image be deconvolved.
  * @param PSF Kernel used to take the image.
- * @param iterations number of iterations.
- * @param alpha growth factor.
+ * @param iterations The number of iterations.
+ * @param alpha The growth factor.
  * @param minmapsize
- * @param numthreads
- * @return gal_data_t* deconvolved image.
+ * @param numthreads Number of threads.
+ * @return gal_data_t* The deconvolved image.
  */
 gal_data_t *
 gal_deconvolve_richardson_lucy (const gal_data_t *image, const gal_data_t *PSF,
@@ -543,7 +545,7 @@ deconvolve_AWMLE_estimate_p_prime (gal_data_t *image, gal_data_t *projection,
  * @param projection The projection in that plane.
  * @param noise The noise factor in that wavelet plane.
  * @param ampl The size of the window.
- * @param numthreads
+ * @param numthreads The number of threads.
  * @param minmapsize
  * @return gal_data_t* The stadistical mask. Must be in range [0,1].
  */
@@ -650,7 +652,7 @@ deconvolve_calcule_AWMLE_mask (gal_data_t *wavelet, gal_data_t *projection,
  * @param residue The residual from the image wavelet descomposition.
  * @param sigma Gaussian noise estimation.
  * @param minmapsize
- * @param numthreads
+ * @param numthreads Number of threads.
  */
 gal_data_t *
 deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
@@ -720,19 +722,20 @@ deconvolve_calcule_AWMLE_noise_factor (size_t planes, size_t *dsize,
 }
 
 /**
- * @brief Perform a deconvolution with Richardson-Lucy algorithm.ç
+ * @brief Perform a deconvolution with AWMLE algorithm.
  *
- * @param image To be deconvolved.
- * @param PSF Kernel used to take the image.
- * @param iterations number of iterations.
- * @param waves number of planes in wavelet decomposition.
- * @param tolerance to perform an early stop.
- * @param sigma std of gaussian noise.
- * @param alpha growth factor.
+ * @param image The image to be deconvolved.
+ * @param PSF  The distorsion kernel.
+ * @param iterations Number of iterations.
+ * @param waves Number of planes in wavelet decomposition.
+ * @param tolerance Threshold value to perform an early stop.
+ * @param sigma Estimation of gaussian noise (standard desviation).
+ * @param alpha The growth factor.
  * @param minmapsize
- * @param numthreads
- * @param early out parameter, if > 0 shows last iteration.
- * @return gal_data_t* deconvolved image.
+ * @param numthreads Number of threads.
+ * @param early Out parameter: If > 0 an early stop took place and shows the
+ * number of iterations. Early < Iterations in all cases.
+ * @return gal_data_t* The deconvolved image.
  */
 gal_data_t *
 gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
@@ -930,14 +933,14 @@ gal_deconvolve_AWMLE (const gal_data_t *image, const gal_data_t *PSF,
  * Then it updates the object.
  * Last, it adjust the energy in the object.
  *
- * @param correctionterm
+ * @param correctionterm The correction term.
  * @param energy The original energy value (sum of all elements).
  * @param modified_image_res Pprime residue.
- * @param projection
+ * @param projection The image projection.
  * @param psf_fft_conj psf conjugate.
  * @param object The current image reconstruction (in/out parameter).
- * @param alpha The growing factor
- * @param numthreads
+ * @param alpha The growing factor.
+ * @param numthreads The number of threads.
  * @param minmapsize
  */
 void
