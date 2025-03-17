@@ -25688,7 +25688,7 @@ It it is good to validate how large the PSF to match should be, based on the siz
 
 
 
-
+@node Deconvolve, 
 @section Deconvolve
 
 Astronomical images often degrade due to various factors like the inherent defects in measuring devices, lens optics, or atmospheric turbulence. If these distortions are considered linear and space-invariant, they can be modeled as a convolution between the PSF (a kernel modeling lens distortion) and the original image. However, this is not always the case, as these conditions are rarely met (Jefferies and Christou, 1993), and a non-linear noise term must be added. A detected image, I(x, y), can be expressed as:
@@ -25723,12 +25723,7 @@ Specifically, the high frequencies where noise is dominant create significant di
 
 
 
-@menu
-* Weiner-Tikhonov method::  1st algo
-* Richardson-Lucy method::  2nd algo
-* AWMLE method::  3rd algo
-@end menu
-
+@node Weiner-Tikhonov , Richardson-Lucy, AWMLE
 @subsection Weiner-Tikhonov method
 
 The Wiener-Tikhonov algorithm is a linear regularization method. Its goal is to minimize the difference between the observed image and the convolution of the object with the point spread function (PSF), 
@@ -25759,6 +25754,7 @@ Since astronomical images of galaxies do not have well-defined edges and this fi
 This algorithm assumes the input only contains Gaussian noise.
 
 
+@node Richardson-Lucy 
 @subsection Richardson-Lucy method
 
 The Richardson-Lucy iterative algorithm is based on a Bayesian approach. It assumes that pixel values follow a Poisson distribution and provides a maximum likelihood solution.
@@ -25780,6 +25776,7 @@ The parameter @math{K} is used to adjust the pixel values so that their total su
 
 This algorithm assumes the input only contains poisson noise.
 
+@node AWMLE 
 @subsection AWMLE method
 
 The AWMLE (Adaptive Wavelets Maximum Likelihood Estimator) algorithm can be understood as an extension of the previously described Richardson-Lucy algorithm. This algorithm additionally assumes that the image contains both Poisson and Gaussian noise.
